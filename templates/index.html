@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>OpenStreetMap with Leaflet</title>
+	<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+	<link rel="stylesheet" href="/static/style.css">
+	<link rel="stylesheet" href="/static/modal_windows.css">
+	<!-- <link rel="stylesheet" href="/static/pins.css"> -->
+
+</head>
+
+<body>
+	<div class="button-container">
+		<button id="load-routes">Load Routes</button>
+		<button id="load-regions">Load Regions</button>
+	</div>
+	<div id="infoModal" class="modal" role="dialog" aria-labelledby="modalTitle" aria-hidden="true">
+		<div class="modal-content">
+			<div class="modal-header" id="modalHeader">
+				<span class="close" role="button" aria-label="Close">&times;</span>
+				<h2 id="modalTitle">Modal Title</h2>
+			</div>
+			<div id="modalText">
+				<p class="indented">Information will appear here</p>
+				<div class="show-more-section">
+					<p>This is the initial text that is always shown.</p>
+					<div id="moreContent" class="hidden">
+						<p class="secret">This is additional content that is shown when "Show More" is clicked.</p>
+					</div>
+					<a href="#" id="showMoreButton">Show More</a>
+				</div>
+			</div>
+		</div>
+	</div>
+	<h1>OSM Map with Leaflet!</h1>
+	<div id="map"></div>
+	<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+	<script>
+		// Bounds for the map using coordinates
+		var southWest = L.latLng(58.28, 27.68); // Bottom left corner
+		var northEast = L.latLng(61.92, 36.61);  // Top right corner
+		var bounds = L.latLngBounds(southWest, northEast);
+
+		// Initialize the map and fit it to the bounds
+		var map = L.map('map').fitBounds(bounds); // Automatically sets the view to fit the bounds
+
+		// OpenStreetMap tiles
+		L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+			maxZoom: 19,
+			attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+		}).addTo(map);
+		// Restrict panning to the bounds
+		map.setMaxBounds(bounds);
+		var minZoomLevel = 7;
+		map.setMinZoom(minZoomLevel);
+		// Layer references
+		let routesLayer = null;
+		let regionsLayer = null;
+		let routesData = null;
+		let regionsData = null;
+		// Function to fetch data from Flask API
+		function fetchData() {
+			fetch('http://127.0.0.1:5000/api/getDataTable?type=routes') 
+				.then(response => response.json())
+				.then(data => {
+					routesData = data; 
+					//console.log('Routes data loaded:', routesData);
+				})
+				.catch(error => console.error('Error fetching routes:', error));
+		}
+		fetchData();
+
+		function fetchRegions() {
+			fetch('http://127.0.0.1:5000/api/getDataTable?type=regions')
+				.then(response => response.json())
+				.then(data => {
+					regionsData = data;
+					//console.log('Regions data loaded:', regionsData);
+				})
+				.catch(error => console.error('Error fetching regions:', error));
+		}
+		//fetchRegions();
+
+		function generateModalContent(data, targetName) {
+			const targetItem = data.find(item => item.name === targetName);
+			if (!targetItem) {
+				return `<p>No information available for the selected item.</p>`;
+			}
+			console.log()
+			let content = '<ul>';
+			content += `<li>
+				<strong>Наименование:</strong> ${targetItem.name || 'N/A'}<br>
+				<strong>Протяженность тропы:</strong> ${targetItem.length || 'N/A'} км <br>
+				<strong>Тип тропы по типу передвижения:</strong> ${targetItem.movement || 'N/A'} <br>
+				<strong>Время прохождения тропы:</strong> ${targetItem.time_min || 'N/A'} - ${targetItem.max_time || 'N/A'} ч <br>
+				<strong>Регион:</strong> ${targetItem.region || 'N/A'} <br>				
+				</li><br>`;
+
+			content += '</ul>';
+			return content;
+		}
+	
+		function generateAdditionalModalContent(data, targetName) {
+			const targetItem = data.find(item => item.name === targetName);
+			if (!targetItem) {
+				return `<p>No information available for the selected item.</p>`;
+			}
+			let content = '<ul>';
+			content += `<li>
+				<strong>Наименование:</strong> ${targetItem.name || 'N/A'}<br>
+			</li><br>`;
+			content += '</ul>';
+			return content;
+		}
+
+		function onEachFeature(feature, layer, layerType) {
+			if (feature.properties && feature.properties.name) {
+				// Bind a popup to the layer, showing a clickable link
+				layer.bindPopup(`<a href="#" class="popup-link">${feature.properties.name}</a>`);
+
+				layer.on('popupopen', function () {
+					const link = document.querySelector('.popup-link');
+					if (link) {
+						link.addEventListener('click', function (e) {
+							e.preventDefault();
+							if (layerType === 'routes' && routesData) {
+								//openModal('Routes Information', generateModalContent(routesData));
+								openModal('Routes Information', generateModalContent(routesData, feature.properties.name), generateAdditionalModalContent(routesData, feature.properties.name));
+							} else if (layerType === 'regions' && regionsData) {
+								//openModal('Regions Information', generateModalContent(regionsData));
+								openModal('Regions Information', generateModalContent(regionsData), generateAdditionalModalContent(regionsData));
+							} 
+							//else {
+							// 	openModal('Data Not Available', 'No data could be found for the selected type.');
+							// }
+						});
+					}
+				});
+			}
+		}
+	
+		function openModal(title, infoText, moreInfo) {
+			// Update the modal title
+			const modalTitle = document.getElementById('modalTitle');
+			modalTitle.textContent = title;
+			// Update the modal info text
+			const modalText = document.getElementById('modalText');
+			modalText.querySelector('p.indented').innerHTML = infoText;
+			// Update the "Show More" section
+			const moreContent = document.getElementById('moreContent');
+			moreContent.innerHTML = moreInfo;
+			moreContent.classList.add('hidden'); // Hide the additional content initially
+			document.getElementById('showMoreButton').textContent = 'Show More';
+			const modal = document.getElementById('infoModal');
+			modal.style.display = 'block';
+		}
+
+		// Function to close the modal
+		function closeModal() {
+			const modal = document.getElementById('infoModal');
+			modal.style.display = 'none'; // Hide the modal
+		}
+		// Close the modal when the close button is clicked
+		document.querySelector('.close').addEventListener('click', function () {
+			const modal = document.getElementById('infoModal');
+			modal.style.display = 'none';
+		})
+		// Close the modal when clicking outside of it
+		window.addEventListener('click', function (event) {
+			const modal = document.getElementById('infoModal');
+			if (event.target === modal) {
+				modal.style.display = 'none';
+			}
+		});
+
+		// Function to load GeoJSON data
+		function loadGeoJSON(url, layerType) {
+			fetch(url)
+				.then(response => {
+					if (!response.ok) {
+						throw new Error('Network response was not ok');
+					}
+					return response.json();
+				})
+				.then(data => {
+					const geoJsonLayer = L.geoJSON(data, {
+						style: function (feature) {
+							return {
+								color: 'black',
+								weight: 2
+							};
+						},
+						onEachFeature: function (feature, layer) {
+							onEachFeature(feature, layer, layerType); 
+						}
+					});
+					if (layerType === 'routes') {
+						if (routesLayer) {
+							map.removeLayer(routesLayer);
+							routesLayer = null;  // Reset the layer reference
+						} else {
+							routesLayer = geoJsonLayer;
+							routesLayer.addTo(map);
+						}
+					} else if (layerType === 'regions') {
+						if (regionsLayer) {
+							map.removeLayer(regionsLayer);
+							regionsLayer = null;
+						} else {
+							regionsLayer = geoJsonLayer;
+							regionsLayer.addTo(map);
+						}
+					}
+				})
+				.catch(error => {
+					console.error('There was a problem with the fetch operation:', error);
+				});
+		}
+
+		// Event listeners for buttons
+		document.getElementById('load-routes').addEventListener('click', () => {
+			loadGeoJSON('/routes.geojson', 'routes');
+		});
+
+		document.getElementById('load-regions').addEventListener('click', () => {
+			loadGeoJSON('/path/to/your/regions.geojson', 'regions');
+		});
+
+		document.getElementById('showMoreButton').addEventListener('click', function () {
+			const moreContent = document.getElementById('moreContent');
+			if (moreContent.classList.contains('hidden')) {
+				moreContent.classList.remove('hidden');
+				this.textContent = 'Show Less';
+			} else {
+				moreContent.classList.add('hidden');
+				this.textContent = 'Show More';
+			}
+		});
+	</script>
+</body>
+
+</html>

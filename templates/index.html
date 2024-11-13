@@ -192,7 +192,6 @@
 			}
 			// let content = '<ul>';
 			let content = `
-				<strong>Наименование:</strong> ${targetItem.name || 'N/A'}<br>
 				<strong>Эксплуатирует и управляет:</strong> ${targetItem.controls_ret || 'N/A'}<br>
 				<strong>Статус:</strong> ${targetItem.status_ret || 'N/A'}<br>
 				<strong>Доступна для людей с ограниченными возможностями:</strong> ${
@@ -251,7 +250,7 @@
 		// Function to close the modal
 		function closeModal() {
 			const modal = document.getElementById('infoModal');
-			modal.style.display = 'none'; // Hide the modal
+			modal.style.display = 'none';
 		}
 		// Close the modal when the close button is clicked
 		document.querySelector('.close').addEventListener('click', function () {
@@ -274,7 +273,7 @@
 					if (!response.ok) {
 						throw new Error('Something went wrong');
 					}
-					return response.json(); // Return the parsed JSON data
+					return response.json();
 				})
 				.catch(error => {
 					console.error('There was a problem with the fetch operation:', error);
@@ -299,7 +298,7 @@
 			// Add or update the layer based on the layer type
 			if (layerType === 'routes') {
 				if (routesLayer) {
-					map.removeLayer(routesLayer); // Remove existing layer if it exists
+					map.removeLayer(routesLayer); /
 					if (!filtered) { routesLayer = null; }
 				}
 				else {
@@ -310,7 +309,7 @@
 				}
 				if (filtered) {
 					routesLayer = geoJsonLayer;
-					routesLayer.addTo(map); // Add the new layer to the map
+					routesLayer.addTo(map); 
 				}
 			} else if (layerType === 'equipment') {
 				if (!filtered) {
@@ -351,9 +350,7 @@
 			fetchGeoJSON(url)
 				.then(data => {
 					geojsonData[layerType] = data;
-					console.log("data:", data)
-					console.log("layerType:", layerType)
-					processGeoJSON(data, layerType, false); // Pass data to processing function
+					processGeoJSON(data, layerType, false);
 				})
 				.catch(error => {
 					console.error('Failed to load and process GeoJSON data:', error);
@@ -362,37 +359,20 @@
 
 		function filterData(selectedMovementRet, selectedLength) {
 			const layerType = 'routes';
-			if (!geojsonData['routes'] || !routesData) return; // Ensure data is loaded
-			// Get selected movement_ret values from the dropdown
-			// const selectedValues = Array.from(document.getElementById('movementRetSelect').selectedOptions)
-			// 	.map(option => option.value);
-			// Find IDs in db data that match selected movement_ret values
-			console.log("selectedMovementRet:", selectedMovementRet)
-			console.log("selectedLength:", selectedLength)
+			if (!geojsonData['routes'] || !routesData) return; 
 			const lengthRanges = selectedLength.map(range => {
 				const [min, max] = range.includes('+') ? [10, Infinity] : range.split('-').map(Number);
-				console.log("max:", max)
-				console.log("min:", min)
 				return { min, max };
 			});
-			//console.log(routesData);
 			const matchingIds = new Set(
 				routesData
-					// .filter(item => selectedValues.includes(item.movement_ret))
 					.filter(item => {
 						const matchesMovementRet = selectedMovementRet.length === 0 ||
 							selectedMovementRet.includes(item.movement_ret);
-						//console.log("item length:", item.length)
-						// const matchesLength = lengthRanges.length === 0 || lengthRanges.some(({min, max}) =>
-						// item.lentgh >= min && item.length <= max
-						// );
-						//console.log("matchesMovementRet:", matchesMovementRet)
 						const matchesLength = lengthRanges.length === 0 || lengthRanges.some(({ min, max }) =>
 							item.length >= min && item.length <= max
 						);
-						// console.log("id r:", item.id)
 						matchesLength ? console.log("length:", item.length) : console.log("N/A:");
-						//console.log("matchesLength:", matchesLength)
 						return matchesMovementRet && matchesLength;
 					})
 					.map(item => item.id)
@@ -411,9 +391,6 @@
 				geojsonData['equipment'].features
 					.filter(feature => {
 						const item = feature.properties;
-						// console.log("item", item)
-						// console.log("id", item.id)
-						// console.log("link", item.link_to_route);
 						const matchesRoute = matchingIds.has(item.link_to_route);
 						// console.log("matchesRoute:", matchesRoute);
 						return matchesRoute;
@@ -424,13 +401,9 @@
 			const filteredEquipmentFeatures = geojsonData['equipment'].features.filter(feature =>
 				matchingEquipmentIds.has(feature.properties.id)
 			);
+
 			// Update GeoJSON data with only the filtered features
-
 			const filteredEquipment = { ...geojsonData['routes'], features: filteredEquipmentFeatures };
-			// Display the filtered data on the map
-			//displayDataOnMap(filteredGeoData, layerType);
-
-			console.log("8");
 			processGeoJSON(filteredEquipment, 'equipment', true);
 		}
 
@@ -439,42 +412,20 @@
 			const filterOptions = document.getElementById('filterOptions');
 			filterOptions.style.display = filterOptions.style.display === 'none' ? 'block' : 'none';
 		});
-		// function reset() {
-		// 	const checkboxes = document.querySelectorAll('#filterOptions input[type="checkbox"]')
-		// 	checkboxes.forEach(checkbox => {
-		// 		checkbox.checked = false;
-		// 	});
-		// }
+
 		// Apply the filter based on selected checkboxes
 		function filterRoutesAndEquipment() {
-			// const selectedValues = Array.from(document.querySelectorAll('#filterOptions input[type="checkbox"]:checked'))
-			// .map(checkbox => checkbox.value);
 			const selectedMovementRet = Array.from(document.querySelectorAll('#filterOptions input[type="checkbox"]:checked'))
 				.filter(checkbox => checkbox.id.startsWith('movementRet'))
 				.map(checkbox => checkbox.value);
 			const selectedLength = Array.from(document.querySelectorAll('#filterOptions input[type="checkbox"]:checked'))
 				.filter(checkbox => checkbox.id.startsWith('length'))
 				.map(checkbox => checkbox.value);
-			console.log("7");
 			filterData(selectedMovementRet, selectedLength)
 		};
 
 		document.getElementById('applyFilter').addEventListener('click', () => {
-			// const selectedValues = Array.from(document.querySelectorAll('#filterOptions input[type="checkbox"]:checked'))
-			// 	.map(checkbox => checkbox.value);
-			// const selectedMovementRet = Array.from(document.querySelectorAll('#filterOptions input[type="checkbox"]:checked'))
-			// 	.filter(checkbox => checkbox.id.startsWith('movementRet'))
-			// 	.map(checkbox => checkbox.value);
-			// const selectedLength = Array.from(document.querySelectorAll('#filterOptions input[type="checkbox"]:checked'))
-			// 	.filter(checkbox => checkbox.id.startsWith('length'))
-			// 	.map(checkbox => checkbox.value);
-			// filterData(selectedMovementRet, selectedLength)
-
 			filterRoutesAndEquipment();
-
-			//filterData(selectedValues);
-			// Optionally hide the filter options box after applying
-			//document.getElementById('filterOptions').style.display = 'none';
 		});
 		document.getElementById('resetFilter').addEventListener('click', () => {
 			const checkboxes = document.querySelectorAll('#filterOptions input[type="checkbox"]')
@@ -485,46 +436,18 @@
 			processGeoJSON(geojsonData['routes'], 'routes', true)
 			if (equipmentLayer != null) processGeoJSON(geojsonData['equipment'], 'equipment', true)
 		})
-		// Load data and add event listener after DOM is ready
-		// document.addEventListener('DOMContentLoaded', () => {
-		// 	//loadLocalGeoJSON(); // Load routes data once when the page loads
-
-		// 	// Set up event listener for filter button
-		// 	document.getElementById('filterButton').addEventListener('click', () => {
-		// 		filterData(); // Call filterData function when button is clicked
-		// 	});
-		// });
-
-		// document.getElementById('filterButton').addEventListener('click', () => {
-		// 	filterData(); // Call filterData function when button is clicked
-		// });
-
+		
 		const equipmentCheckbox = document.getElementById('equipmentShow');
 		equipmentCheckbox.checked = false;
 		equipmentCheckbox.addEventListener('click', () => {
-			// console.log("pd");
-			// const checkbox2 = Array.from(document.querySelectorAll('#filterOptions input[type="checkbox"]:checked'))
 			const checkbox = document.getElementById('equipmentShow');
 			if (equipmentCheckbox.checked) {
-				// loadGeoJSON('/equipment.geojson', 'equipment');
-				// if (routesLayer) {
-				//   filterRoutesAndEquipment(); console.log("6")
-				// }
 				if (routesLayer == null) {
 					loadGeoJSON('/equipment-geodata', 'equipment');
-					console.log("4")
 				}
 				else {
-					//geojsonData['equipment'] = fetchGeoJSON('/equipment.geojson');
-
-					// .then(data => {
-					//   geojsonData['equipment'] = data;
-					// })
-					//console.log("equipment", geojsonData['equipment']);
-					//load2('/equipment.geojson', 'equipment');
 					loadGeoJSON('/equipment-geodata', 'equipment');
-					//equipmentLayer = L.geoJSON(equipmentData);
-					filterRoutesAndEquipment(); console.log("6")
+					filterRoutesAndEquipment();
 				};
 			}
 			else {
@@ -532,12 +455,8 @@
 				equipmentLayer = null;
 				console.log("5");
 			}
-			//   //fetchEquip();
-			//   //console.log(equipmentData); 
-			//   if (routesLayer == null) loadGeoJSON('/equipment.geojson', 'equipment');
-			//   else filterRoutesAndEquipment();
 		});
-		
+
 		// Event listeners for buttons
 		document.getElementById('load-routes').addEventListener('click', () => {
 			loadGeoJSON('/routes-geodata', 'routes');

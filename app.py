@@ -81,7 +81,7 @@ def get_data():
 	#print(f"API Response Status Code: {api_response.status_code}")
 	#print(f"API Response Content: {api_response.text}")
 	if query_param == 'routes':  update_geojson(api_response.json())
-	#if query_param == 'regions': update_regions(api_response.json())
+	if query_param == 'regions': update_regions(api_response.json())
 	#if query_param == 'equipment': update_equipment(api_response.json())
 	if api_response.status_code == 200:
 		return api_response.json()
@@ -110,6 +110,58 @@ def update_geojson(routes_data):
 	with open(geojson_routes_path, 'w', encoding='utf-8') as f:
 		geojson.dump(existing_geojson, f)
 
+def update_regions(regions_data):
+	geojson_regions_path = os.path.join(current_app.root_path, 'regions.geojson')
+	if os.path.exists(geojson_regions_path):
+		with open(geojson_regions_path, 'r', encoding='utf-8') as f:
+			existing_geojson = geojson.load(f)
+			existing_regions_ids = {feature['properties']['link'] for feature in existing_geojson['features']}
+	else:
+		existing_geojson = geojson.FeatureCollection([])
+		existing_regions_ids = set()
+	for region in regions_data:
+		url = region.get('route_area_map')
+		if url not in existing_regions_ids:
+			if url:
+				geojson_data = process_regions(url)
+				existing_regions_ids.add(url)
+				if geojson_data:
+					existing_geojson['features'].extend(geojson_data['features'])
+	with open(geojson_regions_path, 'w', encoding='utf-8') as f:
+		geojson.dump(existing_geojson, f)
+
+def process_regions(url):
+	response = requests.get(url)
+	if response.status_code != 200:
+		raise Exception(f"Failed to download file: {response.status_code}")
+	kml_content = response.content
+	root = ET.fromstring(kml_content)
+	features = []
+	properties = {"link": url}
+
+	ns = {'kml': 'http://www.opengis.net/kml/2.2'}
+	for placemark in root.findall('.//kml:Placemark', ns):
+		print("placemark")
+		extended_data = placemark.find('.//kml:ExtendedData/kml:SchemaData', ns)
+		if extended_data is not None:
+			for simple_data in extended_data.findall('kml:SimpleData', ns):
+				if simple_data.attrib.get('name') == 'Наименование':
+					properties['name'] = simple_data.text or "N/A"
+				elif simple_data.attrib.get('name') == 'Категория':
+					properties['category'] = simple_data.text or "N/A"
+		polygon = placemark.find('.//kml:Polygon/kml:outerBoundaryIs/kml:LinearRing/kml:coordinates', ns)
+		print(polygon)
+		if polygon is not None:
+			coords = polygon.text.strip()
+			coordinates = [
+				[float(coord) for coord in point.split(',')[:2]]
+				for point in coords.split()
+			]
+			geometry = geojson.Polygon([coordinates])
+			features.append(geojson.Feature(geometry=geometry, properties=properties))
+	
+	feature_collection = geojson.FeatureCollection(features)
+	return feature_collection
 # def get_geojson(routes_data):
 # 	geojson_routes = {
 # 			"type": "FeatureCollection",

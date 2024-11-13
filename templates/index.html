@@ -360,6 +360,117 @@
 				});
 		}
 
+		function filterData(selectedMovementRet, selectedLength) {
+			const layerType = 'routes';
+			if (!geojsonData['routes'] || !routesData) return; // Ensure data is loaded
+			// Get selected movement_ret values from the dropdown
+			// const selectedValues = Array.from(document.getElementById('movementRetSelect').selectedOptions)
+			// 	.map(option => option.value);
+			// Find IDs in db data that match selected movement_ret values
+			console.log("selectedMovementRet:", selectedMovementRet)
+			console.log("selectedLength:", selectedLength)
+			const lengthRanges = selectedLength.map(range => {
+				const [min, max] = range.includes('+') ? [10, Infinity] : range.split('-').map(Number);
+				console.log("max:", max)
+				console.log("min:", min)
+				return { min, max };
+			});
+			//console.log(routesData);
+			const matchingIds = new Set(
+				routesData
+					// .filter(item => selectedValues.includes(item.movement_ret))
+					.filter(item => {
+						const matchesMovementRet = selectedMovementRet.length === 0 ||
+							selectedMovementRet.includes(item.movement_ret);
+						//console.log("item length:", item.length)
+						// const matchesLength = lengthRanges.length === 0 || lengthRanges.some(({min, max}) =>
+						// item.lentgh >= min && item.length <= max
+						// );
+						//console.log("matchesMovementRet:", matchesMovementRet)
+						const matchesLength = lengthRanges.length === 0 || lengthRanges.some(({ min, max }) =>
+							item.length >= min && item.length <= max
+						);
+						// console.log("id r:", item.id)
+						matchesLength ? console.log("length:", item.length) : console.log("N/A:");
+						//console.log("matchesLength:", matchesLength)
+						return matchesMovementRet && matchesLength;
+					})
+					.map(item => item.id)
+			);
+			console.log("matchingIds:", matchingIds);
+			// Filter GeoJSON features based on these IDs
+			const filteredFeatures = geojsonData['routes'].features.filter(feature =>
+				matchingIds.has(feature.properties.id) // assuming properties.id is used in GeoJSON for db id
+			);
+			const filteredGeoData = { ...geojsonData['routes'], features: filteredFeatures };
+			processGeoJSON(filteredGeoData, layerType, true);
+		}
+
+		// Toggle the filter options display on button click
+		document.getElementById('filterButton').addEventListener('click', () => {
+			const filterOptions = document.getElementById('filterOptions');
+			filterOptions.style.display = filterOptions.style.display === 'none' ? 'block' : 'none';
+		});
+		// function reset() {
+		// 	const checkboxes = document.querySelectorAll('#filterOptions input[type="checkbox"]')
+		// 	checkboxes.forEach(checkbox => {
+		// 		checkbox.checked = false;
+		// 	});
+		// }
+		// Apply the filter based on selected checkboxes
+		function filterRoutesAndEquipment() {
+			// const selectedValues = Array.from(document.querySelectorAll('#filterOptions input[type="checkbox"]:checked'))
+			// .map(checkbox => checkbox.value);
+			const selectedMovementRet = Array.from(document.querySelectorAll('#filterOptions input[type="checkbox"]:checked'))
+				.filter(checkbox => checkbox.id.startsWith('movementRet'))
+				.map(checkbox => checkbox.value);
+			const selectedLength = Array.from(document.querySelectorAll('#filterOptions input[type="checkbox"]:checked'))
+				.filter(checkbox => checkbox.id.startsWith('length'))
+				.map(checkbox => checkbox.value);
+			console.log("7");
+			filterData(selectedMovementRet, selectedLength)
+		};
+
+		document.getElementById('applyFilter').addEventListener('click', () => {
+			// const selectedValues = Array.from(document.querySelectorAll('#filterOptions input[type="checkbox"]:checked'))
+			// 	.map(checkbox => checkbox.value);
+			// const selectedMovementRet = Array.from(document.querySelectorAll('#filterOptions input[type="checkbox"]:checked'))
+			// 	.filter(checkbox => checkbox.id.startsWith('movementRet'))
+			// 	.map(checkbox => checkbox.value);
+			// const selectedLength = Array.from(document.querySelectorAll('#filterOptions input[type="checkbox"]:checked'))
+			// 	.filter(checkbox => checkbox.id.startsWith('length'))
+			// 	.map(checkbox => checkbox.value);
+			// filterData(selectedMovementRet, selectedLength)
+
+			filterRoutesAndEquipment();
+
+			//filterData(selectedValues);
+			// Optionally hide the filter options box after applying
+			//document.getElementById('filterOptions').style.display = 'none';
+		});
+		document.getElementById('resetFilter').addEventListener('click', () => {
+			const checkboxes = document.querySelectorAll('#filterOptions input[type="checkbox"]')
+			checkboxes.forEach(checkbox => {
+				checkbox.checked = false;
+			});
+			//reset()
+			processGeoJSON(geojsonData['routes'], 'routes', true)
+			if (equipmentLayer != null) processGeoJSON(geojsonData['equipment'], 'equipment', true)
+		})
+		// Load data and add event listener after DOM is ready
+		// document.addEventListener('DOMContentLoaded', () => {
+		// 	//loadLocalGeoJSON(); // Load routes data once when the page loads
+
+		// 	// Set up event listener for filter button
+		// 	document.getElementById('filterButton').addEventListener('click', () => {
+		// 		filterData(); // Call filterData function when button is clicked
+		// 	});
+		// });
+
+		// document.getElementById('filterButton').addEventListener('click', () => {
+		// 	filterData(); // Call filterData function when button is clicked
+		// });
+
 		// Event listeners for buttons
 		document.getElementById('load-routes').addEventListener('click', () => {
 			loadGeoJSON('/routes-geodata', 'routes');

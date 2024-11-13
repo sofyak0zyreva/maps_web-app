@@ -82,7 +82,7 @@ def get_data():
 	#print(f"API Response Content: {api_response.text}")
 	if query_param == 'routes':  update_geojson(api_response.json())
 	if query_param == 'regions': update_regions(api_response.json())
-	#if query_param == 'equipment': update_equipment(api_response.json())
+	if query_param == 'equipment': update_equipment(api_response.json())
 	if api_response.status_code == 200:
 		return api_response.json()
 	return jsonify({"error": "Failed to fetch routes"}), 500
@@ -130,6 +130,41 @@ def update_regions(regions_data):
 	with open(geojson_regions_path, 'w', encoding='utf-8') as f:
 		geojson.dump(existing_geojson, f)
 
+def update_equipment(equip_data):
+	geojson_equip_path = os.path.join(current_app.root_path, 'equipment.geojson')
+	if os.path.exists(geojson_equip_path):
+		with open(geojson_equip_path, 'r', encoding='utf-8') as f:
+			existing_geojson = geojson.load(f)
+			existing_equp_ids = {feature['properties']['id'] for feature in existing_geojson['features']}
+	else:
+		existing_geojson = geojson.FeatureCollection([])
+		existing_equp_ids = set()
+	features = []
+	for equip in equip_data:
+		name = equip.get('device')
+		ident = equip.get('id')
+		type = equip.get('device_type')
+		link_to_route = equip.get('ecotrails_passports_2418_id_2')
+		longitude = equip.get('longitude')
+		latitude = equip.get('latitude')
+		try:
+			longitude = float(longitude)
+			latitude = float(latitude)
+		except (TypeError, ValueError):
+			# print(f"Skipping invalid coordinates: longitude={longitude}, latitude={latitude}")
+			continue  # Skip if coordinates are invalid
+		if ident not in existing_equp_ids:
+			if ident > 1: #TODO: remove when db is fixed
+				geometry = geojson.Point((longitude, latitude))
+				features.append(geojson.Feature(geometry=geometry, properties={"name": name, "id": ident, "type": type, "link_to_route": link_to_route}))
+				existing_equp_ids.add(ident)
+				print(existing_equp_ids)
+	geojson_data = geojson.FeatureCollection(features)
+	if geojson_data:
+		existing_geojson['features'].extend(geojson_data['features'])
+	with open(geojson_equip_path, 'w', encoding='utf-8') as f:
+		geojson.dump(existing_geojson, f)
+
 def process_regions(url):
 	response = requests.get(url)
 	if response.status_code != 200:
@@ -162,6 +197,7 @@ def process_regions(url):
 	
 	feature_collection = geojson.FeatureCollection(features)
 	return feature_collection
+
 # def get_geojson(routes_data):
 # 	geojson_routes = {
 # 			"type": "FeatureCollection",

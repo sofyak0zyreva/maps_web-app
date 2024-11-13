@@ -80,14 +80,14 @@ def get_data():
 	
 	#print(f"API Response Status Code: {api_response.status_code}")
 	#print(f"API Response Content: {api_response.text}")
-	if query_param == 'routes':  update_geojson(api_response.json())
+	if query_param == 'routes':  update_routes(api_response.json())
 	if query_param == 'regions': update_regions(api_response.json())
 	if query_param == 'equipment': update_equipment(api_response.json())
 	if api_response.status_code == 200:
 		return api_response.json()
 	return jsonify({"error": "Failed to fetch routes"}), 500
 
-def update_geojson(routes_data):
+def update_routes(routes_data):
 	geojson_routes_path = os.path.join(current_app.root_path, 'routes.geojson')
 	if os.path.exists(geojson_routes_path):
 		with open(geojson_routes_path, 'r', encoding='utf-8') as f:
@@ -110,6 +110,12 @@ def update_geojson(routes_data):
 	with open(geojson_routes_path, 'w', encoding='utf-8') as f:
 		geojson.dump(existing_geojson, f)
 
+# Add functions to enable access to geojson files from frontend
+@app.route('/routes-geodata')
+def routes_data():
+	geojson_routes_path = os.path.join(current_app.root_path, 'routes.geojson')
+	return send_file(geojson_routes_path, mimetype='application/json')
+
 def update_regions(regions_data):
 	geojson_regions_path = os.path.join(current_app.root_path, 'regions.geojson')
 	if os.path.exists(geojson_regions_path):
@@ -129,6 +135,11 @@ def update_regions(regions_data):
 					existing_geojson['features'].extend(geojson_data['features'])
 	with open(geojson_regions_path, 'w', encoding='utf-8') as f:
 		geojson.dump(existing_geojson, f)
+
+@app.route('/regions-geodata')
+def regions_data():
+    geojson_regions_path = os.path.join(current_app.root_path, 'regions.geojson')
+    return send_file(geojson_regions_path, mimetype='application/json')
 
 def update_equipment(equip_data):
 	geojson_equip_path = os.path.join(current_app.root_path, 'equipment.geojson')
@@ -164,6 +175,11 @@ def update_equipment(equip_data):
 		existing_geojson['features'].extend(geojson_data['features'])
 	with open(geojson_equip_path, 'w', encoding='utf-8') as f:
 		geojson.dump(existing_geojson, f)
+
+@app.route('/equipment-geodata')
+def equipment_data():
+    geojson_equip_path = os.path.join(current_app.root_path, 'equipment.geojson')
+    return send_file(geojson_equip_path, mimetype='application/json')
 
 def process_regions(url):
 	response = requests.get(url)

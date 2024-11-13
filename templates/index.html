@@ -12,6 +12,59 @@
 
 <body>
 	<div class="button-container">
+		<!-- Filter Button -->
+		<label>
+			<input type="checkbox" id="equipmentShow" checked>
+			Оборудование на тропе
+		</label>
+		<div class="filter-container">
+			<button id="filterButton">Filter</button>
+			<!-- Filter Options Box (initially hidden) -->
+			<div id="filterOptions" style="display: none;">
+				<div class="filter-column">
+					<label><strong>Тип:</strong></label>
+					<div class="checkbox-option">
+						<input type="checkbox" id="movementRetA" value="Пешеходная">
+						<label for="movementRetA">Пешеходная</label>
+					</div>
+					<div class="checkbox-option">
+						<input type="checkbox" id="movementRetB" value="Велосипедная">
+						<label for="movementRetB">Велосипедная</label>
+					</div>
+					<div class="checkbox-option">
+						<input type="checkbox" id="movementRetC" value="Лыжная">
+						<label for="movementRetC">Лыжная</label>
+					</div>
+					<div class="checkbox-option">
+						<input type="checkbox" id="movementRetC" value="Комбинированная">
+						<label for="movementRetC">Комбинированная</label>
+					</div>
+				</div>
+				<div class="filter-column">
+					<label><strong>Протяженность:</strong></label>
+					<div class="checkbox-option">
+						<input type="checkbox" id="length1" value="1-2">
+						<label for="length1">1-2 км</label>
+					</div>
+					<div class="checkbox-option">
+						<input type="checkbox" id="length2" value="2-5">
+						<label for="length2">2-5 км</label>
+					</div>
+					<div class="checkbox-option">
+						<input type="checkbox" id="length3" value="5-10">
+						<label for="length3">5-10 км</label>
+					</div>
+					<div class="checkbox-option">
+						<input type="checkbox" id="length4" value="10+">
+						<label for="length4">10+ км</label>
+					</div>
+				</div>
+				<div style="display: flex; justify-content: space-between;">
+					<button id="applyFilter">Apply</button>
+					<button id="resetFilter">Reset</button>
+				</div>
+			</div>
+		</div>
 		<button id="load-routes">Load Routes</button>
 		<button id="load-regions">Load Regions</button>
 	</div>

@@ -1,5 +1,5 @@
 import requests
-from flask import Flask, render_template, session, jsonify, request, current_app, send_file
+from flask import Flask, render_template, session, jsonify, request
 from fastkml import kml
 import gpxpy
 import time
@@ -9,7 +9,7 @@ import geojson
 import xml.etree.ElementTree as ET
 from flask_caching import Cache
 
-app = Flask(__name__)
+app = Flask(__name__, instance_relative_config=True)
 cache = Cache(app, config={'CACHE_TYPE': 'simple'})
 # Configure CORS to allow the front-end origin
 # CORS(app, resources={r"/api/*": {"origins": "http://127.0.0.1:5500"}})
@@ -80,15 +80,22 @@ def get_data():
 	
 	#print(f"API Response Status Code: {api_response.status_code}")
 	#print(f"API Response Content: {api_response.text}")
-	if query_param == 'routes':  update_routes(api_response.json())
+	if query_param == 'routes': update_routes(api_response.json())
 	if query_param == 'regions': update_regions(api_response.json())
 	if query_param == 'equipment': update_equipment(api_response.json())
 	if api_response.status_code == 200:
 		return api_response.json()
 	return jsonify({"error": "Failed to fetch routes"}), 500
 
+routes_cache = None
+def load_routes():
+	global routes_cache
+	geojson_file_path = os.path.join(app.instance_path, 'routes.geojson')
+	with open(geojson_file_path) as f:
+		routes_cache = geojson.load(f)
+
 def update_routes(routes_data):
-	geojson_routes_path = os.path.join(current_app.root_path, 'routes.geojson')
+	geojson_routes_path = os.path.join(app.instance_path, 'routes.geojson')
 	if os.path.exists(geojson_routes_path):
 		with open(geojson_routes_path, 'r', encoding='utf-8') as f:
 			existing_geojson = geojson.load(f)
@@ -110,14 +117,20 @@ def update_routes(routes_data):
 	with open(geojson_routes_path, 'w', encoding='utf-8') as f:
 		geojson.dump(existing_geojson, f)
 
-# Add functions to enable access to geojson files from frontend
+#Add functions to enable access to geojson files from frontend
 @app.route('/routes-geodata')
 def routes_data():
-	geojson_routes_path = os.path.join(current_app.root_path, 'routes.geojson')
-	return send_file(geojson_routes_path, mimetype='application/json')
+	return jsonify(routes_cache)
+
+regions_cache = None
+def load_regions():
+	global regions_cache
+	geojson_file_path = os.path.join(app.instance_path, 'regions.geojson')
+	with open(geojson_file_path) as f:
+		regions_cache = geojson.load(f)
 
 def update_regions(regions_data):
-	geojson_regions_path = os.path.join(current_app.root_path, 'regions.geojson')
+	geojson_regions_path = os.path.join(app.instance_path, 'regions.geojson')
 	if os.path.exists(geojson_regions_path):
 		with open(geojson_regions_path, 'r', encoding='utf-8') as f:
 			existing_geojson = geojson.load(f)
@@ -138,11 +151,17 @@ def update_regions(regions_data):
 
 @app.route('/regions-geodata')
 def regions_data():
-    geojson_regions_path = os.path.join(current_app.root_path, 'regions.geojson')
-    return send_file(geojson_regions_path, mimetype='application/json')
+	return jsonify(regions_cache)
+
+equipment_cache = None
+def load_equipment():
+	global equipment_cache
+	geojson_file_path = os.path.join(app.instance_path, 'equipment.geojson')
+	with open(geojson_file_path) as f:
+		equipment_cache = geojson.load(f)
 
 def update_equipment(equip_data):
-	geojson_equip_path = os.path.join(current_app.root_path, 'equipment.geojson')
+	geojson_equip_path = os.path.join(app.instance_path, 'equipment.geojson')
 	if os.path.exists(geojson_equip_path):
 		with open(geojson_equip_path, 'r', encoding='utf-8') as f:
 			existing_geojson = geojson.load(f)
@@ -178,8 +197,7 @@ def update_equipment(equip_data):
 
 @app.route('/equipment-geodata')
 def equipment_data():
-    geojson_equip_path = os.path.join(current_app.root_path, 'equipment.geojson')
-    return send_file(geojson_equip_path, mimetype='application/json')
+	return jsonify(equipment_cache)
 
 def process_regions(url):
 	response = requests.get(url)
@@ -304,4 +322,7 @@ def home():
 	return render_template('index.html')
 
 if __name__ == '__main__':
+	load_routes()
+	load_regions()
+	load_equipment()
 	app.run(port=5000, debug=True)

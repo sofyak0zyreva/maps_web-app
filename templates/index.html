@@ -581,10 +581,10 @@
 			// const checkbox = document.getElementById('equipmentShow');
 			if (equipmentCheckbox.checked) {
 				if (routesLayer == null) {
-					loadGeoJSON('/equipment-geodata', 'equipment');
+					loadGeoJSON("{{ url_for('equipment_data') }}", 'equipment');
 				}
 				else {
-					loadGeoJSON('/equipment-geodata', 'equipment');
+					loadGeoJSON("{{ url_for('equipment_data') }}", 'equipment');
 					filterRoutesAndEquipment();
 				};
 			}
@@ -600,7 +600,7 @@
 		objectsCheckbox.addEventListener('click', () => {
 			// const checkbox = document.getElementById('objectsShow');
 			// data = fetchGeoJSON('/objects-geodata');
-			loadGeoJSON('/objects-geodata', 'objects');
+			loadGeoJSON("{{ url_for('objects_data') }}", 'objects');
 			// if (objectsCheckbox.checked) {
 			// 	const geoJsonLayer = L.geoJSON(data, {
 			// 		style: function (feature) {
@@ -623,11 +623,11 @@
 
 		// Event listeners for buttons
 		document.getElementById('load-routes').addEventListener('click', () => {
-			loadGeoJSON('/routes-geodata', 'routes');
+			loadGeoJSON("{{ url_for('routes_data') }}", 'routes');
 		});
 
 		document.getElementById('load-regions').addEventListener('click', () => {
-			loadGeoJSON('/regions-geodata', 'regions');
+			loadGeoJSON("{{ url_for('regions_data') }}", 'regions');
 		});
 
 		document.getElementById('showMoreButton').addEventListener('click', function () {

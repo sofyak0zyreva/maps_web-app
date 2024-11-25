@@ -1,6 +1,5 @@
 import requests
 from flask import Flask, render_template, session, jsonify, request
-from fastkml import kml
 import gpxpy
 import time
 import os
@@ -25,7 +24,6 @@ API_URL = "http://176.74.9.162:3318/VegaPlusST07/api/getDataTable"
 
 login = os.getenv('LOGIN')
 password = os.getenv('PASSWORD')
-equipment = os.getenv('EQUIPMENT')
 
 
 def get_new_token():
@@ -61,6 +59,8 @@ def get_valid_token():
 
 routes = os.getenv('ROUTES')
 regions = os.getenv('REGIONS')
+equipment = os.getenv('EQUIPMENT')
+objects = os.getenv('REGOBJ')
 
 
 @app.route('/api/getDataTable', methods=['GET', 'POST'])
@@ -75,6 +75,8 @@ def get_data():
         table_name = routes
     elif query_param == 'equipment':
         table_name = equipment
+    elif query_param == 'objects':
+        table_name = objects
     token = get_valid_token()
     if token is None:
         return jsonify({"error": "Unable to authenticate and retrieve token"}), 500
@@ -91,6 +93,8 @@ def get_data():
         update_regions(api_response.json())
     if query_param == 'equipment':
         update_equipment(api_response.json())
+    if query_param == 'objects':
+        update_objects(api_response.json())
     if api_response.status_code == 200:
         return api_response.json()
     return jsonify({"error": "Failed to fetch routes"}), 500
@@ -102,8 +106,9 @@ routes_cache = None
 def load_routes():
     global routes_cache
     geojson_file_path = os.path.join(app.instance_path, 'routes.geojson')
-    with open(geojson_file_path) as f:
-        routes_cache = geojson.load(f)
+    if os.path.exists(geojson_file_path):
+        with open(geojson_file_path) as f:
+            routes_cache = geojson.load(f)
 
 
 def update_routes(routes_data):
@@ -145,8 +150,9 @@ regions_cache = None
 def load_regions():
     global regions_cache
     geojson_file_path = os.path.join(app.instance_path, 'regions.geojson')
-    with open(geojson_file_path) as f:
-        regions_cache = geojson.load(f)
+    if os.path.exists(geojson_file_path):
+        with open(geojson_file_path) as f:
+            regions_cache = geojson.load(f)
 
 
 def update_regions(regions_data):
@@ -159,11 +165,14 @@ def update_regions(regions_data):
     else:
         existing_geojson = geojson.FeatureCollection([])
         existing_regions_ids = set()
+    region_id = 1
     for region in regions_data:
         url = region.get('route_area_map')
         if url not in existing_regions_ids:
             if url:
-                geojson_data = process_regions(url)
+                properties = {"link": url, "id": region_id}
+                region_id += 1
+                geojson_data = process_regions(url, properties)
                 existing_regions_ids.add(url)
                 if geojson_data:
                     existing_geojson['features'].extend(
@@ -183,8 +192,9 @@ equipment_cache = None
 def load_equipment():
     global equipment_cache
     geojson_file_path = os.path.join(app.instance_path, 'equipment.geojson')
-    with open(geojson_file_path) as f:
-        equipment_cache = geojson.load(f)
+    if os.path.exists(geojson_file_path):
+        with open(geojson_file_path) as f:
+            equipment_cache = geojson.load(f)
 
 
 def update_equipment(equip_data):
@@ -200,6 +210,7 @@ def update_equipment(equip_data):
     features = []
     for equip in equip_data:
         name = equip.get('device')
+        # print(name)
         ident = equip.get('id')
         type = equip.get('device_type')
         link_to_route = equip.get('ecotrails_passports_2418_id_2')
@@ -230,14 +241,67 @@ def equipment_data():
     return jsonify(equipment_cache)
 
 
-def process_regions(url):
+objects_cache = None
+
+
+def load_objects():
+    global objects_cache
+    geojson_file_path = os.path.join(app.instance_path, 'objects.geojson')
+    if os.path.exists(geojson_file_path):
+        with open(geojson_file_path) as f:
+            objects_cache = geojson.load(f)
+
+
+def update_objects(objects_data):
+    geojson_objects_path = os.path.join(app.instance_path, 'objects.geojson')
+    if os.path.exists(geojson_objects_path):
+        with open(geojson_objects_path, 'r', encoding='utf-8') as f:
+            existing_geojson = geojson.load(f)
+            existing_objects_ids = {feature['properties']['id']
+                                    for feature in existing_geojson['features']}
+    else:
+        existing_geojson = geojson.FeatureCollection([])
+        existing_objects_ids = set()
+    features = []
+    for object in objects_data:
+        name = object.get('tipeobj')
+        # print(name)
+        ident = object.get('id')
+        longitude = object.get('place_width')
+        latitude = object.get('place_longitude')
+        
+        try:
+            longitude = float(longitude)
+            latitude = float(latitude)
+        except (TypeError, ValueError):
+            # print(f"Skipping invalid coordinates: longitude={longitude}, latitude={latitude}")
+            continue  # Skip if coordinates are invalid
+        if ident not in existing_objects_ids:
+            geometry = geojson.Point((longitude, latitude))
+            features.append(geojson.Feature(geometry=geometry,
+                            properties={"name": name, "id": ident}))
+            existing_objects_ids.add(ident)
+            print(existing_objects_ids)
+    geojson_data = geojson.FeatureCollection(features)
+    if geojson_data:
+        existing_geojson['features'].extend(geojson_data['features'])
+    with open(geojson_objects_path, 'w', encoding='utf-8') as f:
+        geojson.dump(existing_geojson, f)
+
+
+@app.route('/objects-geodata')
+def objects_data():
+    return jsonify(objects_cache)
+
+
+def process_regions(url, properties):
     response = requests.get(url)
     if response.status_code != 200:
         raise Exception(f"Failed to download file: {response.status_code}")
     kml_content = response.content
     root = ET.fromstring(kml_content)
     features = []
-    properties = {"link": url}
+    # properties = {"link": url}
 
     ns = {'kml': 'http://www.opengis.net/kml/2.2'}
     for placemark in root.findall('.//kml:Placemark', ns):
@@ -369,4 +433,5 @@ if __name__ == '__main__':
     load_routes()
     load_regions()
     load_equipment()
+    load_objects()
     app.run(port=5000, debug=True)

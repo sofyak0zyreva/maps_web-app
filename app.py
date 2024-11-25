@@ -64,19 +64,19 @@ objects = os.getenv('REGOBJ')
 
 
 @app.route('/api/getDataTable', methods=['GET', 'POST'])
-@cache.cached(timeout=90)  # Cache JSON data for 90 seconds
+@cache.cached(timeout=90, key_prefix=lambda: f"get_data_{request.args.get('type')}")
 def get_data():
-    query_param = request.args.get('type')  # Get 'type' parameter from the URL
-    # print("Query Params:", request.args)
-    table_name = ''
-    if query_param == 'routes':
-        table_name = routes
-    elif query_param == 'regions':
-        table_name = routes
-    elif query_param == 'equipment':
-        table_name = equipment
-    elif query_param == 'objects':
-        table_name = objects
+    query_param = request.args.get('type')
+    table_mapping = {
+        'routes': routes,
+        'regions': regions,
+        'equipment': equipment,
+        'objects': objects
+    }
+    table_name = table_mapping.get(query_param)
+    if not table_name:
+        return jsonify({"error": "Invalid type parameter"}), 400
+
     token = get_valid_token()
     if token is None:
         return jsonify({"error": "Unable to authenticate and retrieve token"}), 500
@@ -85,18 +85,21 @@ def get_data():
     data_payload = {"tablename": table_name, "limit": 0}
     api_response = requests.post(API_URL, data=data_payload, headers=headers)
 
-    # print(f"API Response Status Code: {api_response.status_code}")
-    # print(f"API Response Content: {api_response.text}")
-    if query_param == 'routes':
-        update_routes(api_response.json())
-    if query_param == 'regions':
-        update_regions(api_response.json())
-    if query_param == 'equipment':
-        update_equipment(api_response.json())
-    if query_param == 'objects':
-        update_objects(api_response.json())
     if api_response.status_code == 200:
-        return api_response.json()
+        response_data = api_response.json()
+
+        # Update data based on query_param
+        update_mapping = {
+            'routes': update_routes,
+            'regions': update_regions,
+            'equipment': update_equipment,
+            'objects': update_objects
+        }
+        update_function = update_mapping.get(query_param)
+        if update_function:
+            update_function(response_data)
+
+        return jsonify(response_data)  # Cache this response
     return jsonify({"error": "Failed to fetch routes"}), 500
 
 
@@ -269,7 +272,7 @@ def update_objects(objects_data):
         ident = object.get('id')
         longitude = object.get('place_width')
         latitude = object.get('place_longitude')
-        
+
         try:
             longitude = float(longitude)
             latitude = float(latitude)

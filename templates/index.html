@@ -13,53 +13,86 @@
 <body>
 	<div class="button-container">
 		<!-- Filter Button -->
-		<label>
-			<input type="checkbox" id="equipmentShow" checked>
-			Оборудование на тропе
-		</label>
+		<div class="show-container">
+			<label>
+				<input type="checkbox" id="equipmentShow" checked>
+				Оборудование на тропе
+			</label>
+			<label>
+				<input type="checkbox" id="objectsShow" checked>
+				Объекты ООПТ
+			</label>
+		</div>
 		<div class="filter-container">
 			<button id="filterButton">Filter</button>
 			<!-- Filter Options Box (initially hidden) -->
 			<div id="filterOptions" style="display: none;">
-				<div class="filter-column">
-					<label><strong>Тип:</strong></label>
-					<div class="checkbox-option">
-						<input type="checkbox" id="movementRetA" value="Пешеходная">
-						<label for="movementRetA">Пешеходная</label>
+				<!-- Navigation Tabs -->
+				<div style="text-align: center; margin-bottom: 10px;">
+					<span id="routesTab" class="filter-tab active-tab">Routes</span> |
+					<span id="regionsTab" class="filter-tab">Regions</span>
+				</div>
+				<!-- Routes Filter (Page 1) -->
+				<div id="routesFilter" class="filter-page">
+					<div class="filter-column">
+						<label><strong>Тип:</strong></label>
+						<div class="checkbox-option">
+							<input type="checkbox" id="movementRetA" value="Пешеходная">
+							<label for="movementRetA">Пешеходная</label>
+						</div>
+						<div class="checkbox-option">
+							<input type="checkbox" id="movementRetB" value="Велосипедная">
+							<label for="movementRetB">Велосипедная</label>
+						</div>
+						<div class="checkbox-option">
+							<input type="checkbox" id="movementRetC" value="Лыжная">
+							<label for="movementRetC">Лыжная</label>
+						</div>
+						<div class="checkbox-option">
+							<input type="checkbox" id="movementRetD" value="Комбинированная">
+							<label for="movementRetD">Комбинированная</label>
+						</div>
 					</div>
-					<div class="checkbox-option">
-						<input type="checkbox" id="movementRetB" value="Велосипедная">
-						<label for="movementRetB">Велосипедная</label>
-					</div>
-					<div class="checkbox-option">
-						<input type="checkbox" id="movementRetC" value="Лыжная">
-						<label for="movementRetC">Лыжная</label>
-					</div>
-					<div class="checkbox-option">
-						<input type="checkbox" id="movementRetC" value="Комбинированная">
-						<label for="movementRetC">Комбинированная</label>
+					<div class="filter-column">
+						<label><strong>Протяженность:</strong></label>
+						<div class="checkbox-option">
+							<input type="checkbox" id="length1" value="1-2">
+							<label for="length1">1-2 км</label>
+						</div>
+						<div class="checkbox-option">
+							<input type="checkbox" id="length2" value="2-5">
+							<label for="length2">2-5 км</label>
+						</div>
+						<div class="checkbox-option">
+							<input type="checkbox" id="length3" value="5-10">
+							<label for="length3">5-10 км</label>
+						</div>
+						<div class="checkbox-option">
+							<input type="checkbox" id="length4" value="10+">
+							<label for="length4">10+ км</label>
+						</div>
 					</div>
 				</div>
-				<div class="filter-column">
-					<label><strong>Протяженность:</strong></label>
-					<div class="checkbox-option">
-						<input type="checkbox" id="length1" value="1-2">
-						<label for="length1">1-2 км</label>
-					</div>
-					<div class="checkbox-option">
-						<input type="checkbox" id="length2" value="2-5">
-						<label for="length2">2-5 км</label>
-					</div>
-					<div class="checkbox-option">
-						<input type="checkbox" id="length3" value="5-10">
-						<label for="length3">5-10 км</label>
-					</div>
-					<div class="checkbox-option">
-						<input type="checkbox" id="length4" value="10+">
-						<label for="length4">10+ км</label>
+				<!-- Regions Filter (Page 2) -->
+				<div id="regionsFilter" class="filter-page" style="display: none;">
+					<div class="filter-column">
+						<label><strong>Категория:</strong></label>
+						<div class="checkbox-option">
+							<input type="checkbox" id="category1" value="памятник природы">
+							<label for="category1">Памятник природы</label>
+						</div>
+						<div class="checkbox-option">
+							<input type="checkbox" id="category2" value="государственный природный заказник">
+							<label for="category2">Природный заказник</label>
+						</div>
+						<div class="checkbox-option">
+							<input type="checkbox" id="category3" value="природный парк">
+							<label for="category3">Природный парк</label>
+						</div>
 					</div>
 				</div>
-				<div style="display: flex; justify-content: space-between;">
+				<!-- Apply and Reset Buttons -->
+				<div style="display: flex; justify-content: space-between; margin-top: 10px;">
 					<button id="applyFilter">Apply</button>
 					<button id="resetFilter">Reset</button>
 				</div>
@@ -110,11 +143,13 @@
 		let routesLayer = null;
 		let regionsLayer = null;
 		let equipmentLayer  = null;
+		let objectsLayer = null;
 		let routesData = null;
 		let regionsData = null;
 		let equipmentData;
+		let objectsData = null;
 		const apiUrl = "{{ url_for('get_data') }}";
-		// Function to fetch data from Flask API
+		// Functions to fetch data from Flask API
 		function fetchData() {
 			fetch(`${apiUrl}?type=routes`) 
 				.then(response => response.json())
@@ -135,19 +170,25 @@
 		}
 		fetchRegions();
 
-		// function fetchEquip() {
-		// 	fetch(`${apiUrl}?type=equipment`)
-		// 		.then(response => response.json())
-		// 		.then(data => {
-		// 			console.log(data)
-		// 			equipmentData = data;
-		// 			console.log("equipmentData:", equipmentData)
-		// 			//console.log('Regions data loaded:', regionsData);
-		// 		})
-		// 		.catch(error => console.error('Error fetching equip:', error));
-		// }
-		//fetchEquip();
-		//console.log("equipmentData:", equipmentData)
+		function fetchEquip() {
+			fetch(`${apiUrl}?type=equipment`)
+				.then(response => response.json())
+				.then(data => {
+					equipmentData = data;
+				})
+				.catch(error => console.error('Error fetching equip:', error));
+		}
+		fetchEquip();
+
+		function fetchObjects() {
+			fetch(`${apiUrl}?type=objects`)
+				.then(response => response.json())
+				.then(data => {
+					objectsData = data;
+				})
+				.catch(error => console.error('Error fetching obj:', error));
+		}
+		fetchObjects();
 
 		function generateModalContent(data, targetName) {
 			const targetItem = data.find(item => item.name === targetName);
@@ -283,6 +324,7 @@
 
 		// Function to process the GeoJSON data
 		function processGeoJSON(data, layerType, filtered) {
+			console.log("data", data);
 			// Create the GeoJSON layer with custom style and event handlers
 			const geoJsonLayer = L.geoJSON(data, {
 				style: function (feature) {
@@ -292,9 +334,12 @@
 					};
 				},
 				onEachFeature: function (feature, layer) {
+					// console.log("feature", feature);
+					// console.log("layer", layer);
 					onEachFeature(feature, layer, layerType);
 				}
 			});
+			//geoJsonLayer.addTo(map);
 			// Add or update the layer based on the layer type
 			if (layerType === 'routes') {
 				if (routesLayer) {
@@ -311,7 +356,8 @@
 					routesLayer = geoJsonLayer;
 					routesLayer.addTo(map); 
 				}
-			} else if (layerType === 'equipment') {
+			} 
+			else if (layerType === 'equipment') {
 				if (!filtered) {
 					if (equipmentLayer) {
 						console.log("1");
@@ -331,16 +377,47 @@
 					equipmentLayer = geoJsonLayer;
 					equipmentLayer.addTo(map);
 				}
-			} else if (layerType === 'regions') {
+			} 
+			else if (layerType === 'regions') {
+				// if (regionsLayer) {
+				// 	console.log("remove", regionsLayer)
+				// 	map.removeLayer(regionsLayer);
+				// 	regionsLayer = null;
+				// }
+				// else {
+				// 	regionsLayer = geoJsonLayer;
+				// 	console.log("add", regionsLayer)
+				// 	regionsLayer.addTo(map);
+				// }
 				if (regionsLayer) {
-					console.log("remove", regionsLayer)
 					map.removeLayer(regionsLayer);
-					regionsLayer = null;
+					if (!filtered) { regionsLayer = null; }
 				}
 				else {
+					if (!filtered) {
+						regionsLayer = geoJsonLayer;
+						regionsLayer.addTo(map);
+					}
+				}
+				if (filtered) {
 					regionsLayer = geoJsonLayer;
-					console.log("add", regionsLayer)
 					regionsLayer.addTo(map);
+				}
+			} 
+			else if (layerType === 'objects') {
+				console.log("geoJsonLayer", geoJsonLayer)
+				if (objectsLayer) {
+					console.log("remove", objectsLayer)
+					map.removeLayer(objectsLayer);
+					objectsLayer = null;
+				}
+				else {
+					console.log("objectsLayer", objectsLayer)
+					objectsLayer = geoJsonLayer;
+					console.log("objectsLayer2", objectsLayer)
+
+					// console.log("add", objectsLayer)
+					objectsLayer.addTo(map);
 				}
 			}
 		}
@@ -350,12 +427,36 @@
 			fetchGeoJSON(url)
 				.then(data => {
 					geojsonData[layerType] = data;
+					console.log("geojsonData[layerType]", data)
 					processGeoJSON(data, layerType, false);
 				})
 				.catch(error => {
 					console.error('Failed to load and process GeoJSON data:', error);
 				});
 		}
+		
+		// Get references to tabs and filter pages
+		const routesTab = document.getElementById("routesTab");
+		const regionsTab = document.getElementById("regionsTab");
+		const routesFilter = document.getElementById("routesFilter");
+		const regionsFilter = document.getElementById("regionsFilter");
+
+		// Function to activate the Routes filter
+		routesTab.addEventListener("click", function () {
+			routesFilter.style.display = "block";
+			regionsFilter.style.display = "none";
+			routesTab.classList.add("active-tab");
+			regionsTab.classList.remove("active-tab");
+		});
+
+		// Function to activate the Regions filter
+		regionsTab.addEventListener("click", function () {
+			regionsFilter.style.display = "block";
+			routesFilter.style.display = "none";
+			regionsTab.classList.add("active-tab");
+			routesTab.classList.remove("active-tab");
+		});
+
 
 		function filterData(selectedMovementRet, selectedLength) {
 			const layerType = 'routes';
@@ -407,6 +508,27 @@
 			processGeoJSON(filteredEquipment, 'equipment', true);
 		}
 
+		function filterRegions(selectedCategory) {
+			if (!geojsonData['regions'] || !regionsData) return; 
+			const matchingIds = new Set(
+				geojsonData['regions'].features
+					.filter(feature => {
+						const item = feature.properties;
+						// console.log("item", item);
+						// console.log("item.category", item.category);
+						// console.log("selectedCategory", selectedCategory);
+						const matchesCategory = selectedCategory.includes(item.category);
+						console.log("matchesCategory", matchesCategory);
+						return matchesCategory;
+					})
+					.map(feature => feature.properties.id)
+			);
+			const filteredRegionsFeatures = geojsonData['regions'].features.filter(feature =>
+				matchingIds.has(feature.properties.id)
+			);
+			const filteredRegions = { ...geojsonData['regions'], features: filteredRegionsFeatures };
+			processGeoJSON(filteredRegions, 'regions', true);
+		}
 		// Toggle the filter options display on button click
 		document.getElementById('filterButton').addEventListener('click', () => {
 			const filterOptions = document.getElementById('filterOptions');
@@ -415,32 +537,48 @@
 
 		// Apply the filter based on selected checkboxes
 		function filterRoutesAndEquipment() {
-			const selectedMovementRet = Array.from(document.querySelectorAll('#filterOptions input[type="checkbox"]:checked'))
+			const selectedMovementRet = Array.from(document.querySelectorAll('#routesFilter input[type="checkbox"]:checked'))
 				.filter(checkbox => checkbox.id.startsWith('movementRet'))
 				.map(checkbox => checkbox.value);
-			const selectedLength = Array.from(document.querySelectorAll('#filterOptions input[type="checkbox"]:checked'))
+			const selectedLength = Array.from(document.querySelectorAll('#routesFilter input[type="checkbox"]:checked'))
 				.filter(checkbox => checkbox.id.startsWith('length'))
 				.map(checkbox => checkbox.value);
 			filterData(selectedMovementRet, selectedLength)
 		};
 
 		document.getElementById('applyFilter').addEventListener('click', () => {
-			filterRoutesAndEquipment();
+			if (routesTab.classList.contains("active-tab")) filterRoutesAndEquipment();
+			else if (regionsTab.classList.contains("active-tab")) {
+				const selectedCategory = Array.from(document.querySelectorAll('#regionsFilter input[type="checkbox"]:checked'))
+					.filter(checkbox => checkbox.id.startsWith('category'))
+					.map(checkbox => checkbox.value);
+				filterRegions(selectedCategory)
+			}
 		});
 		document.getElementById('resetFilter').addEventListener('click', () => {
-			const checkboxes = document.querySelectorAll('#filterOptions input[type="checkbox"]')
-			checkboxes.forEach(checkbox => {
-				checkbox.checked = false;
-			});
+			if (routesTab.classList.contains("active-tab")) 
+			{
+				const checkboxes = document.querySelectorAll('#routesFilter input[type="checkbox"]')
+				checkboxes.forEach(checkbox => {
+					checkbox.checked = false;
+				});
 			//reset()
-			processGeoJSON(geojsonData['routes'], 'routes', true)
-			if (equipmentLayer != null) processGeoJSON(geojsonData['equipment'], 'equipment', true)
+				processGeoJSON(geojsonData['routes'], 'routes', true)
+				if (equipmentLayer != null) processGeoJSON(geojsonData['equipment'], 'equipment', true)
+			}
+			else if (regionsTab.classList.contains("active-tab")) {
+				const checkboxes = document.querySelectorAll('#regionsFilter input[type="checkbox"]')
+				checkboxes.forEach(checkbox => {
+					checkbox.checked = false;
+				});
+				processGeoJSON(geojsonData['regions'], 'regions', true)
+			}
 		})
 		
 		const equipmentCheckbox = document.getElementById('equipmentShow');
 		equipmentCheckbox.checked = false;
 		equipmentCheckbox.addEventListener('click', () => {
-			const checkbox = document.getElementById('equipmentShow');
+			// const checkbox = document.getElementById('equipmentShow');
 			if (equipmentCheckbox.checked) {
 				if (routesLayer == null) {
 					loadGeoJSON('/equipment-geodata', 'equipment');
@@ -455,6 +593,32 @@
 				equipmentLayer = null;
 				console.log("5");
 			}
+		});
+
+		const objectsCheckbox = document.getElementById('objectsShow');
+		objectsCheckbox.checked = false;
+		objectsCheckbox.addEventListener('click', () => {
+			// const checkbox = document.getElementById('objectsShow');
+			// data = fetchGeoJSON('/objects-geodata');
+			loadGeoJSON('/objects-geodata', 'objects');
+			// if (objectsCheckbox.checked) {
+			// 	const geoJsonLayer = L.geoJSON(data, {
+			// 		style: function (feature) {
+			// 			return {
+			// 				color: 'black',
+			// 				weight: 2
+			// 			};
+			// 		}
+			// 	});
+			// 	objectsLayer = geoJsonLayer;
+			// 	// console.log("add", objectsLayer)
+			// 	objectsLayer.addTo(map);
+			// }
+			// else {
+			// 	if (objectsLayer) map.removeLayer(objectsLayer);
+			// 	objectsLayer = null;
+			// }
+
 		});
 
 		// Event listeners for buttons

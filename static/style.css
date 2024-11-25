@@ -44,6 +44,12 @@ button:hover {
 	color: #fefefe;
 }
 
+.show-container {
+	padding: 5px;
+	display: flex;
+	flex-direction: column;
+}
+
 label {
 	font-size: 14px;
 	font-family: "Source Sans Pro", "Arial", sans-serif;
@@ -128,6 +134,23 @@ label {
 	color: black;
 	text-decoration: none;
 	cursor: pointer;
+}
+
+.filter-tab {
+	cursor: pointer;
+	font-weight: bold;
+	color: #007BFF;
+	text-decoration: underline;
+}
+
+.filter-tab:hover {
+	color: #0056b3;
+}
+
+.active-tab {
+	color: #000;
+	text-decoration: none;
+	cursor: default;
 }
 
 /* 

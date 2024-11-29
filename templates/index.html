@@ -383,13 +383,50 @@
 		// Function to process the GeoJSON data
 		function processGeoJSON(data, layerType, filtered) {
 			console.log("data", data);
+			const equipIcon = new L.Icon({
+				iconUrl: "{{ url_for('static', filename='images/marker-icon-2x-green.png') }}",
+				shadowUrl: "{{ url_for('static', filename='images/marker-shadow.png') }}",
+				iconSize: [25, 41],
+				iconAnchor: [12, 41],
+				popupAnchor: [1, -34],
+				shadowSize: [41, 41]
+			});
+
+			const objIcon = new L.Icon({
+				iconUrl: "{{ url_for('static', filename='images/marker-icon-2x-orange.png') }}",
+				shadowUrl: "{{ url_for('static', filename='images/marker-shadow.png') }}",
+				iconSize: [25, 41],
+				iconAnchor: [12, 41],
+				popupAnchor: [1, -34],
+				shadowSize: [41, 41]
+			});
+
 			// Create the GeoJSON layer with custom style and event handlers
 			const geoJsonLayer = L.geoJSON(data, {
+				pointToLayer: function (feature, latlng) {
+					// Apply different icons based on layer type
+					if (layerType === 'objects') {
+						return L.marker(latlng, { icon: objIcon });
+					} else if (layerType === 'equipment') {
+						return L.marker(latlng, { icon: equipIcon });
+					}
+					return L.marker(latlng);
+				},
 				style: function (feature) {
-					return {
-						color: 'black',
-						weight: 2
-					};
+					// Style for line and polygon features
+					if (layerType === 'routes') {
+						return {
+							color: '#036e29', // Line color for routes
+							weight: 2
+						};
+					} else if (layerType === 'regions') {
+						return {
+							color: '#de9e09', // Outline color for regions
+							weight: 2,
+							fillColor: '#de9e09', // Fill color for regions
+							fillOpacity: 0.3
+						};
+					}
 				},
 				onEachFeature: function (feature, layer) {
 					onEachFeature(feature, layer, layerType);

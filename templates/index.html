@@ -24,13 +24,13 @@
 			</label>
 		</div>
 		<div class="filter-container">
-			<button id="filterButton">Filter</button>
+			<button id="filterButton">Фильтрация</button>
 			<!-- Filter Options Box (initially hidden) -->
 			<div id="filterOptions" style="display: none;">
 				<!-- Navigation Tabs -->
 				<div style="text-align: center; margin-bottom: 10px;">
-					<span id="routesTab" class="filter-tab active-tab">Routes</span> |
-					<span id="regionsTab" class="filter-tab">Regions</span>
+					<span id="routesTab" class="filter-tab active-tab">Экомаршруты</span> |
+					<span id="regionsTab" class="filter-tab">ООПТ</span>
 				</div>
 				<!-- Routes Filter (Page 1) -->
 				<div id="routesFilter" class="filter-page">
@@ -92,14 +92,14 @@
 					</div>
 				</div>
 				<!-- Apply and Reset Buttons -->
-				<div style="display: flex; justify-content: space-between; margin-top: 10px;">
-					<button id="applyFilter">Apply</button>
-					<button id="resetFilter">Reset</button>
+				<div style="display: flex; justify-content: center; margin-top: 10px;">
+					<button class="btn-secondary" id="applyFilter">Применить</button>
+					<button class="btn-secondary" id="resetFilter">Сбросить</button>
 				</div>
 			</div>
 		</div>
-		<button id="load-routes">Load Routes</button>
-		<button id="load-regions">Load Regions</button>
+		<button id="load-routes">Экомаршруты</button>
+		<button id="load-regions">ООПТ</button>
 	</div>
 	<div id="infoModal" class="modal" role="dialog" aria-labelledby="modalTitle" aria-hidden="true">
 		<div class="modal-content">
@@ -108,13 +108,13 @@
 				<h2 id="modalTitle">Modal Title</h2>
 			</div>
 			<div id="modalText">
-				<p class="indented">Information will appear here</p>
+				<p class="indented"></p>
 				<div class="show-more-section">
-					<p>This is the initial text that is always shown.</p>
 					<div id="moreContent" class="hidden">
-						<p class="secret">This is additional content that is shown when "Show More" is clicked.</p>
+						<p class="secret">This is additional content that is shown when "Показать больше" is clicked.</p>
 					</div>
-					<a href="#" id="showMoreButton">Show More</a>
+					<p></p>
+					<a href="#" id="showMoreButton">Показать больше</a>
 				</div>
 			</div>
 		</div>
@@ -123,8 +123,8 @@
 	<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 	<script>
 		// Bounds for the map using coordinates
-		var southWest = L.latLng(58.28, 27.68); // Bottom left corner
-		var northEast = L.latLng(61.92, 36.61);  // Top right corner
+		var southWest = L.latLng(58.78, 27.68); // Bottom left corner
+		var northEast = L.latLng(61.52, 36.61);  // Top right corner
 		var bounds = L.latLngBounds(southWest, northEast);
 
 		// Initialize the map and fit it to the bounds
@@ -150,7 +150,7 @@
 		let objectsData = null;
 		const apiUrl = "{{ url_for('get_data') }}";
 		// Functions to fetch data from Flask API
-		function fetchData() {
+		function fetchRoutes() {
 			fetch(`${apiUrl}?type=routes`) 
 				.then(response => response.json())
 				.then(data => {
@@ -158,7 +158,7 @@
 				})
 				.catch(error => console.error('Error fetching routes:', error));
 		}
-		fetchData();
+		fetchRoutes();
 
 		function fetchRegions() {
 			fetch(`${apiUrl}?type=regions`)
@@ -190,6 +190,23 @@
 		}
 		fetchObjects();
 
+		function isValidImageUrl(url) {
+			const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+			const urlParts = url.split('.');
+			const extension = urlParts[urlParts.length - 1].toLowerCase();
+			return imageExtensions.includes(extension);
+		}
+
+		function extractImageId(link) {
+			const pattern = /\/d\/(.*?)\/view/;  // Regex to extract the file ID
+			const match = link.match(pattern);
+			return match ? match[1] : null;
+		}
+
+		function constructThumbnailLink(imageId) {
+			return `https://drive.google.com/thumbnail?id=${imageId}&sz=w700`;
+		}
+
 		function generateModalContent(data, targetName) {
 			const targetItem = data.find(item => item.name === targetName);
 			if (!targetItem) {
@@ -205,27 +222,54 @@
 				targetItem.time_min === null ? 'N/A' : (targetItem.time_min.split('T'))[1] } - 
 				${
 				targetItem.max_time === null ? 'N/A' : (targetItem.max_time.split('T'))[1] } ч <br>
-				<strong>Регион:</strong> ${targetItem.region || 'N/A'} <br>				
+				<strong>Регион:</strong> ${targetItem.region || 'N/A'} <br>			
 				<br>`;
 
-			// content += '</ul>';
+			const imageId1 = extractImageId(targetItem.photo1);
+			if (imageId1) {
+				const newLink = constructThumbnailLink(imageId1);
+				content += `<div class="photo-section">
+				<img src=${newLink} alt="Photo of ${targetItem.name}" class="modal-photo">
+        		</div>`;
+			}
+			const imageId2 = extractImageId(targetItem.photo2);
+			if (imageId2) {
+				const newLink = constructThumbnailLink(imageId2);
+				content += `<div class="photo-section">
+				<img src=${newLink} alt="Photo of ${targetItem.name}" class="modal-photo">
+        		</div>`;
+			}
 			return content;
 		}
 		function generateModalContent2(data, properties) {
-				// const targetItem = data.find(item => item.name === targetName);
-				// if (!targetItem) {
-				// 	return `<p>No information available for the selected item.</p>`;
-				// }
 				console.log()
-				// let content = '';
 				let content = `
 				<strong>Наименование:</strong> ${properties.name || 'N/A'}<br>
 				<strong>Категория:</strong> ${properties.category || 'N/A'} <br>`;
-
-				// content += '</ul>';
 				return content;
 			}
-	
+		function generateModalContent3(data, targetId) {
+			const targetItem = data.find(item => item.id === targetId);
+			if (!targetItem) {
+				return `<p>No information available for the selected item.</p>`;
+			}
+			let content = `
+				<strong>Тип объекта:</strong> ${targetItem.tipeobj || 'N/A'}<br>
+				<strong>Состояние:</strong> ${targetItem.stagesid_ret || 'N/A'} <br>
+				<br>`;
+			if (targetItem.photo1 && isValidImageUrl(targetItem.photo1)) {
+				content += `<div class="photo-section">
+            	<img src="${targetItem.photo1}" alt="Photo of ${targetItem.name}" class="modal-photo">
+        		</div>`;
+			}
+			if (targetItem.photo2 && isValidImageUrl(targetItem.photo2)) {
+				content += `<div class="photo-section">
+            	<img src="${targetItem.photo1}" alt="Photo of ${targetItem.name}" class="modal-photo">
+        		</div>`;
+			}
+			return content;
+		}
+
 		function generateAdditionalModalContent(data, targetName) {
 			const targetItem = data.find(item => item.name === targetName);
 			if (!targetItem) {
@@ -245,11 +289,26 @@
 			// content += '</ul>';
 			return content;
 		}
+		function generateAdditionalModalContent3(data, targetId) {
+				const targetItem = data.find(item => item.id === targetId);
+				if (!targetItem) {
+					return `<p>No information available for the selected item.</p>`;
+				}
+				let content = `
+				<strong>Размер объекта:</strong> ${targetItem.ziseobj || 'N/A'}<br>
+				<strong>Инвентарный номер:</strong> ${targetItem.invnumb || 'N/A'}<br>
+				<strong>Информация о контракте:</strong> ${targetItem.cont_inf || 'N/A'}<br>
+				<strong>Материалы:</strong> ${targetItem.material || 'N/A'}
+
+			<br>`;
+				return content;
+			}
 
 		function onEachFeature(feature, layer, layerType) {
 			if (feature.properties && feature.properties.name) {
 				// Bind a popup to the layer, showing a clickable link
-				layer.bindPopup(`<a href="#" class="popup-link">${feature.properties.name}</a>`);
+				if (layerType === 'equipment') layer.bindPopup(`<a>${feature.properties.name}</a>`)
+				else layer.bindPopup(`<a href="#" class="popup-link">${feature.properties.name}</a>`);
 
 				layer.on('popupopen', function () {
 					const link = document.querySelector('.popup-link');
@@ -258,14 +317,13 @@
 							e.preventDefault();
 							if (layerType === 'routes' && routesData) {
 								//openModal('Routes Information', generateModalContent(routesData));
-								openModal('Routes Information', generateModalContent(routesData, feature.properties.name), generateAdditionalModalContent(routesData, feature.properties.name));
+								openModal('Информация о маршруте', generateModalContent(routesData, feature.properties.name), generateAdditionalModalContent(routesData, feature.properties.name));
 							} else if (layerType === 'regions' && regionsData) {
 								//openModal('Regions Information', generateModalContent(regionsData));
-								openModal('Regions Information', generateModalContent2(regionsData, feature.properties));
-							} 
-							//else {
-							// 	openModal('Data Not Available', 'No data could be found for the selected type.');
-							// }
+								openModal('Информация об ООПТ', generateModalContent2(regionsData, feature.properties), 'Информация о регионе недоступна');
+							} else if (layerType === 'objects' && objectsData) {
+								openModal('Информация об объекте', generateModalContent3(objectsData, feature.properties.id), generateAdditionalModalContent3(objectsData, feature.properties.id))
+							}
 						});
 					}
 				});
@@ -283,7 +341,7 @@
 			const moreContent = document.getElementById('moreContent');
 			moreContent.innerHTML = moreInfo;
 			moreContent.classList.add('hidden'); // Hide the additional content initially
-			document.getElementById('showMoreButton').textContent = 'Show More';
+			document.getElementById('showMoreButton').textContent = 'Показать больше';
 			const modal = document.getElementById('infoModal');
 			modal.style.display = 'block';
 		}
@@ -334,12 +392,9 @@
 					};
 				},
 				onEachFeature: function (feature, layer) {
-					// console.log("feature", feature);
-					// console.log("layer", layer);
 					onEachFeature(feature, layer, layerType);
 				}
 			});
-			//geoJsonLayer.addTo(map);
 			// Add or update the layer based on the layer type
 			if (layerType === 'routes') {
 				if (routesLayer) {
@@ -456,7 +511,6 @@
 			regionsTab.classList.add("active-tab");
 			routesTab.classList.remove("active-tab");
 		});
-
 
 		function filterData(selectedMovementRet, selectedLength) {
 			const layerType = 'routes';
@@ -634,13 +688,12 @@
 			const moreContent = document.getElementById('moreContent');
 			if (moreContent.classList.contains('hidden')) {
 				moreContent.classList.remove('hidden');
-				this.textContent = 'Show Less';
+				this.textContent = 'Скрыть';
 			} else {
 				moreContent.classList.add('hidden');
-				this.textContent = 'Show More';
+				this.textContent = 'Показать больше';
 			}
 		});
 	</script>
 </body>
-
 </html>

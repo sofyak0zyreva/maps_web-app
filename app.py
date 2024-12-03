@@ -4,14 +4,11 @@ import gpxpy
 import time
 import os
 import geojson
-# from flask_cors import CORS
 import xml.etree.ElementTree as ET
 from flask_caching import Cache
 
 app = Flask(__name__, instance_relative_config=True)
 cache = Cache(app, config={'CACHE_TYPE': 'simple'})
-# Configure CORS to allow the front-end origin
-# CORS(app, resources={r"/api/*": {"origins": "http://127.0.0.1:5500"}})
 
 # Set a secret key for the session
 app.secret_key = os.urandom(24)
@@ -213,7 +210,6 @@ def update_equipment(equip_data):
     features = []
     for equip in equip_data:
         name = equip.get('device')
-        # print(name)
         ident = equip.get('id')
         type = equip.get('device_type')
         link_to_route = equip.get('ecotrails_passports_2418_id_2')
@@ -223,7 +219,6 @@ def update_equipment(equip_data):
             longitude = float(longitude)
             latitude = float(latitude)
         except (TypeError, ValueError):
-            # print(f"Skipping invalid coordinates: longitude={longitude}, latitude={latitude}")
             continue  # Skip if coordinates are invalid
         if ident not in existing_equp_ids:
             if ident > 1:  # TODO: remove when db is fixed
@@ -231,7 +226,6 @@ def update_equipment(equip_data):
                 features.append(geojson.Feature(geometry=geometry, properties={
                                 "name": name, "id": ident, "type": type, "link_to_route": link_to_route}))
                 existing_equp_ids.add(ident)
-                print(existing_equp_ids)
     geojson_data = geojson.FeatureCollection(features)
     if geojson_data:
         existing_geojson['features'].extend(geojson_data['features'])
@@ -268,23 +262,19 @@ def update_objects(objects_data):
     features = []
     for object in objects_data:
         name = object.get('tipeobj')
-        # print(name)
         ident = object.get('id')
         longitude = object.get('place_width')
         latitude = object.get('place_longitude')
-
         try:
             longitude = float(longitude)
             latitude = float(latitude)
         except (TypeError, ValueError):
-            # print(f"Skipping invalid coordinates: longitude={longitude}, latitude={latitude}")
             continue  # Skip if coordinates are invalid
         if ident not in existing_objects_ids:
             geometry = geojson.Point((longitude, latitude))
             features.append(geojson.Feature(geometry=geometry,
                             properties={"name": name, "id": ident}))
             existing_objects_ids.add(ident)
-            print(existing_objects_ids)
     geojson_data = geojson.FeatureCollection(features)
     if geojson_data:
         existing_geojson['features'].extend(geojson_data['features'])
@@ -308,7 +298,6 @@ def process_regions(url, properties):
 
     ns = {'kml': 'http://www.opengis.net/kml/2.2'}
     for placemark in root.findall('.//kml:Placemark', ns):
-        print("placemark")
         extended_data = placemark.find(
             './/kml:ExtendedData/kml:SchemaData', ns)
         if extended_data is not None:
@@ -319,7 +308,6 @@ def process_regions(url, properties):
                     properties['category'] = simple_data.text or "N/A"
         polygon = placemark.find(
             './/kml:Polygon/kml:outerBoundaryIs/kml:LinearRing/kml:coordinates', ns)
-        print(polygon)
         if polygon is not None:
             coords = polygon.text.strip()
             coordinates = [
@@ -332,26 +320,6 @@ def process_regions(url, properties):
 
     feature_collection = geojson.FeatureCollection(features)
     return feature_collection
-
-# def get_geojson(routes_data):
-# 	geojson_routes = {
-# 			"type": "FeatureCollection",
-# 			"features": []
-# 		}
-# 	for route in routes_data:
-# 		url = route.get('gps_track')
-# 		properties = {"name": route.get('name'), "id": route.get('id')}
-# 		print(url)
-# 		if url != None:
-# 			geojson_data = process_file(url, properties)
-# 			#print(geojson_data)
-# 			if geojson_data != None:
-# 				geojson_routes['features'].extend(geojson_data['features'])
-
-# 	print(geojson_routes)
-# 	with open('route4.geojson', 'w', encoding='utf-8') as geojson_file:
-# 		geojson.dump(geojson_routes, geojson_file)
-# 	print("GeoJSON file saved as route4.geojson")
 
 
 def process_file(url, route_properties):

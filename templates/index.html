@@ -1,736 +1,793 @@
 <!DOCTYPE html>
 <html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DOOPT LO map</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='style.css') }}"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='modal_windows.css') }}"
+    />
+  </head>
 
-<head>
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>DOOPT LO map</title>
-	<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-	<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-	<link rel="stylesheet" href="{{ url_for('static', filename='modal_windows.css') }}">
-</head>
+  <body>
+    <div class="button-container">
+      <!-- Filter Button -->
+      <div class="show-container">
+        <label>
+          <input type="checkbox" id="equipmentShow" checked />
+          Оборудование на тропе
+        </label>
+        <label>
+          <input type="checkbox" id="objectsShow" checked />
+          Объекты ООПТ
+        </label>
+      </div>
+      <div class="filter-container">
+        <button id="filterButton">Фильтрация</button>
+        <!-- Filter Options Box (initially hidden) -->
+        <div id="filterOptions" style="display: none">
+          <!-- Navigation Tabs -->
+          <div style="text-align: center; margin-bottom: 10px">
+            <span id="routesTab" class="filter-tab active-tab"
+              >Экомаршруты</span
+            >
+            |
+            <span id="regionsTab" class="filter-tab">ООПТ</span>
+          </div>
+          <!-- Routes Filter (Page 1) -->
+          <div id="routesFilter" class="filter-page">
+            <div class="filter-column">
+              <label><strong>Тип:</strong></label>
+              <div class="checkbox-option">
+                <input type="checkbox" id="movementRet1" value="Пешеходная" />
+                <label for="movementRet1">Пешеходная</label>
+              </div>
+              <div class="checkbox-option">
+                <input type="checkbox" id="movementRet2" value="Велосипедная" />
+                <label for="movementRet2">Велосипедная</label>
+              </div>
+              <div class="checkbox-option">
+                <input type="checkbox" id="movementRet3" value="Лыжная" />
+                <label for="movementRet3">Лыжная</label>
+              </div>
+              <div class="checkbox-option">
+                <input
+                  type="checkbox"
+                  id="movementRet4"
+                  value="Комбинированная"
+                />
+                <label for="movementRet4">Комбинированная</label>
+              </div>
+            </div>
+            <div class="filter-column">
+              <label><strong>Протяженность:</strong></label>
+              <div class="checkbox-option">
+                <input type="checkbox" id="length1" value="1-2" />
+                <label for="length1">1-2 км</label>
+              </div>
+              <div class="checkbox-option">
+                <input type="checkbox" id="length2" value="2-5" />
+                <label for="length2">2-5 км</label>
+              </div>
+              <div class="checkbox-option">
+                <input type="checkbox" id="length3" value="5-10" />
+                <label for="length3">5-10 км</label>
+              </div>
+              <div class="checkbox-option">
+                <input type="checkbox" id="length4" value="10+" />
+                <label for="length4">10+ км</label>
+              </div>
+            </div>
+          </div>
+          <!-- Regions Filter (Page 2) -->
+          <div id="regionsFilter" class="filter-page" style="display: none">
+            <div class="filter-column">
+              <label><strong>Категория:</strong></label>
+              <div class="checkbox-option">
+                <input
+                  type="checkbox"
+                  id="category1"
+                  value="памятник природы"
+                />
+                <label for="category1">Памятник природы</label>
+              </div>
+              <div class="checkbox-option">
+                <input
+                  type="checkbox"
+                  id="category2"
+                  value="государственный природный заказник"
+                />
+                <label for="category2">Природный заказник</label>
+              </div>
+              <div class="checkbox-option">
+                <input type="checkbox" id="category3" value="природный парк" />
+                <label for="category3">Природный парк</label>
+              </div>
+            </div>
+          </div>
+          <!-- Apply and Reset Buttons -->
+          <div style="display: flex; justify-content: center; margin-top: 10px">
+            <button class="btn-secondary" id="applyFilter">Применить</button>
+            <button class="btn-secondary" id="resetFilter">Сбросить</button>
+          </div>
+        </div>
+      </div>
+      <button id="load-routes">Экомаршруты</button>
+      <button id="load-regions">ООПТ</button>
+    </div>
+    <div
+      id="infoModal"
+      class="modal"
+      role="dialog"
+      aria-labelledby="modalTitle"
+      aria-hidden="true"
+    >
+      <div class="modal-content">
+        <div class="modal-header" id="modalHeader">
+          <span class="close" role="button" aria-label="Close">&times;</span>
+          <h2 id="modalTitle">Modal Title</h2>
+        </div>
+        <div id="modalText">
+          <p class="indented"></p>
+          <div class="show-more-section">
+            <div id="moreContent" class="hidden">
+              <p class="secret">
+                This is additional content that is shown when "Показать больше"
+                is clicked.
+              </p>
+            </div>
+            <p></p>
+            <a href="#" id="showMoreButton">Показать больше</a>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="map"></div>
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script>
+      // Bounds for the map using coordinates
+      var southWest = L.latLng(58.78, 27.68); // Bottom left corner
+      var northEast = L.latLng(61.52, 36.61); // Top right corner
+      var bounds = L.latLngBounds(southWest, northEast);
 
-<body>
-	<div class="button-container">
-		<!-- Filter Button -->
-		<div class="show-container">
-			<label>
-				<input type="checkbox" id="equipmentShow" checked>
-				Оборудование на тропе
-			</label>
-			<label>
-				<input type="checkbox" id="objectsShow" checked>
-				Объекты ООПТ
-			</label>
-		</div>
-		<div class="filter-container">
-			<button id="filterButton">Фильтрация</button>
-			<!-- Filter Options Box (initially hidden) -->
-			<div id="filterOptions" style="display: none;">
-				<!-- Navigation Tabs -->
-				<div style="text-align: center; margin-bottom: 10px;">
-					<span id="routesTab" class="filter-tab active-tab">Экомаршруты</span> |
-					<span id="regionsTab" class="filter-tab">ООПТ</span>
-				</div>
-				<!-- Routes Filter (Page 1) -->
-				<div id="routesFilter" class="filter-page">
-					<div class="filter-column">
-						<label><strong>Тип:</strong></label>
-						<div class="checkbox-option">
-							<input type="checkbox" id="movementRetA" value="Пешеходная">
-							<label for="movementRetA">Пешеходная</label>
-						</div>
-						<div class="checkbox-option">
-							<input type="checkbox" id="movementRetB" value="Велосипедная">
-							<label for="movementRetB">Велосипедная</label>
-						</div>
-						<div class="checkbox-option">
-							<input type="checkbox" id="movementRetC" value="Лыжная">
-							<label for="movementRetC">Лыжная</label>
-						</div>
-						<div class="checkbox-option">
-							<input type="checkbox" id="movementRetD" value="Комбинированная">
-							<label for="movementRetD">Комбинированная</label>
-						</div>
-					</div>
-					<div class="filter-column">
-						<label><strong>Протяженность:</strong></label>
-						<div class="checkbox-option">
-							<input type="checkbox" id="length1" value="1-2">
-							<label for="length1">1-2 км</label>
-						</div>
-						<div class="checkbox-option">
-							<input type="checkbox" id="length2" value="2-5">
-							<label for="length2">2-5 км</label>
-						</div>
-						<div class="checkbox-option">
-							<input type="checkbox" id="length3" value="5-10">
-							<label for="length3">5-10 км</label>
-						</div>
-						<div class="checkbox-option">
-							<input type="checkbox" id="length4" value="10+">
-							<label for="length4">10+ км</label>
-						</div>
-					</div>
-				</div>
-				<!-- Regions Filter (Page 2) -->
-				<div id="regionsFilter" class="filter-page" style="display: none;">
-					<div class="filter-column">
-						<label><strong>Категория:</strong></label>
-						<div class="checkbox-option">
-							<input type="checkbox" id="category1" value="памятник природы">
-							<label for="category1">Памятник природы</label>
-						</div>
-						<div class="checkbox-option">
-							<input type="checkbox" id="category2" value="государственный природный заказник">
-							<label for="category2">Природный заказник</label>
-						</div>
-						<div class="checkbox-option">
-							<input type="checkbox" id="category3" value="природный парк">
-							<label for="category3">Природный парк</label>
-						</div>
-					</div>
-				</div>
-				<!-- Apply and Reset Buttons -->
-				<div style="display: flex; justify-content: center; margin-top: 10px;">
-					<button class="btn-secondary" id="applyFilter">Применить</button>
-					<button class="btn-secondary" id="resetFilter">Сбросить</button>
-				</div>
-			</div>
-		</div>
-		<button id="load-routes">Экомаршруты</button>
-		<button id="load-regions">ООПТ</button>
-	</div>
-	<div id="infoModal" class="modal" role="dialog" aria-labelledby="modalTitle" aria-hidden="true">
-		<div class="modal-content">
-			<div class="modal-header" id="modalHeader">
-				<span class="close" role="button" aria-label="Close">&times;</span>
-				<h2 id="modalTitle">Modal Title</h2>
-			</div>
-			<div id="modalText">
-				<p class="indented"></p>
-				<div class="show-more-section">
-					<div id="moreContent" class="hidden">
-						<p class="secret">This is additional content that is shown when "Показать больше" is clicked.</p>
-					</div>
-					<p></p>
-					<a href="#" id="showMoreButton">Показать больше</a>
-				</div>
-			</div>
-		</div>
-	</div>
-	<div id="map"></div>
-	<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-	<script>
-		// Bounds for the map using coordinates
-		var southWest = L.latLng(58.78, 27.68); // Bottom left corner
-		var northEast = L.latLng(61.52, 36.61);  // Top right corner
-		var bounds = L.latLngBounds(southWest, northEast);
+      // Initialize the map and fit it to the bounds
+      var map = L.map("map").fitBounds(bounds); // Automatically sets the view to fit the bounds
 
-		// Initialize the map and fit it to the bounds
-		var map = L.map('map').fitBounds(bounds); // Automatically sets the view to fit the bounds
+      // OpenStreetMap tiles
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 19,
+        attribution:
+          '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      }).addTo(map);
+      // Restrict panning to the bounds
+      map.setMaxBounds(bounds);
+      var minZoomLevel = 7;
+      map.setMinZoom(minZoomLevel);
+      // Layer references
+      let routesLayer = null;
+      let regionsLayer = null;
+      let equipmentLayer = null;
+      let objectsLayer = null;
+      let routesData = null;
+      let regionsData = null;
+      let equipmentData;
+      let objectsData = null;
+      const apiUrl = "{{ url_for('get_data') }}";
 
-		// OpenStreetMap tiles
-		L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-			maxZoom: 19,
-			attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-		}).addTo(map);
-		// Restrict panning to the bounds
-		map.setMaxBounds(bounds);
-		var minZoomLevel = 7;
-		map.setMinZoom(minZoomLevel);
-		// Layer references
-		let routesLayer = null;
-		let regionsLayer = null;
-		let equipmentLayer  = null;
-		let objectsLayer = null;
-		let routesData = null;
-		let regionsData = null;
-		let equipmentData;
-		let objectsData = null;
-		const apiUrl = "{{ url_for('get_data') }}";
-		// Functions to fetch data from Flask API
-		function fetchRoutes() {
-			fetch(`${apiUrl}?type=routes`) 
-				.then(response => response.json())
-				.then(data => {
-					routesData = data; 
-				})
-				.catch(error => console.error('Error fetching routes:', error));
-		}
-		fetchRoutes();
+      // Functions to fetch data from Flask API
+      function fetchRoutes() {
+        fetch(`${apiUrl}?type=routes`)
+          .then((response) => response.json())
+          .then((data) => {
+            routesData = data;
+          })
+          .catch((error) => console.error("Error fetching routes:", error));
+      }
+      fetchRoutes();
 
-		function fetchRegions() {
-			fetch(`${apiUrl}?type=regions`)
-				.then(response => response.json())
-				.then(data => {
-					regionsData = data;
-				})
-				.catch(error => console.error('Error fetching regions:', error));
-		}
-		fetchRegions();
+      function fetchRegions() {
+        fetch(`${apiUrl}?type=regions`)
+          .then((response) => response.json())
+          .then((data) => {
+            regionsData = data;
+          })
+          .catch((error) => console.error("Error fetching regions:", error));
+      }
+      fetchRegions();
 
-		function fetchEquip() {
-			fetch(`${apiUrl}?type=equipment`)
-				.then(response => response.json())
-				.then(data => {
-					equipmentData = data;
-				})
-				.catch(error => console.error('Error fetching equip:', error));
-		}
-		fetchEquip();
+      function fetchEquip() {
+        fetch(`${apiUrl}?type=equipment`)
+          .then((response) => response.json())
+          .then((data) => {
+            equipmentData = data;
+          })
+          .catch((error) => console.error("Error fetching equip:", error));
+      }
+      fetchEquip();
 
-		function fetchObjects() {
-			fetch(`${apiUrl}?type=objects`)
-				.then(response => response.json())
-				.then(data => {
-					objectsData = data;
-				})
-				.catch(error => console.error('Error fetching obj:', error));
-		}
-		fetchObjects();
+      function fetchObjects() {
+        fetch(`${apiUrl}?type=objects`)
+          .then((response) => response.json())
+          .then((data) => {
+            objectsData = data;
+          })
+          .catch((error) => console.error("Error fetching obj:", error));
+      }
+      fetchObjects();
 
-		function isValidImageUrl(url) {
-			const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
-			const urlParts = url.split('.');
-			const extension = urlParts[urlParts.length - 1].toLowerCase();
-			return imageExtensions.includes(extension);
-		}
+      function isValidImageUrl(url) {
+        const imageExtensions = ["jpg", "jpeg", "png", "gif", "webp"];
+        const urlParts = url.split(".");
+        const extension = urlParts[urlParts.length - 1].toLowerCase();
+        return imageExtensions.includes(extension);
+      }
 
-		function extractImageId(link) {
-			const pattern = /\/d\/(.*?)\/view/;  // Regex to extract the file ID
-			const match = link.match(pattern);
-			return match ? match[1] : null;
-		}
+      function extractImageId(link) {
+        const pattern = /\/d\/(.*?)\/view/; // Regex to extract the file ID
+        const match = link.match(pattern);
+        return match ? match[1] : null;
+      }
 
-		function constructThumbnailLink(imageId) {
-			return `https://drive.google.com/thumbnail?id=${imageId}&sz=w700`;
-		}
+      function constructThumbnailLink(imageId) {
+        return `https://drive.google.com/thumbnail?id=${imageId}&sz=w700`;
+      }
 
-		function generateModalContent(data, targetName) {
-			const targetItem = data.find(item => item.name === targetName);
-			if (!targetItem) {
-				return `<p>No information available for the selected item.</p>`;
-			}
-			console.log()
-			// let content = '';
-			let content = `
-				<strong>Наименование:</strong> ${targetItem.name || 'N/A'}<br>
-				<strong>Протяженность тропы:</strong> ${targetItem.length || 'N/A'} км <br>
-				<strong>Тип тропы по типу передвижения:</strong> ${targetItem.movement_ret || 'N/A'} <br>
-				<strong>Время прохождения тропы:</strong> ${ 
-				targetItem.time_min === null ? 'N/A' : (targetItem.time_min.split('T'))[1] } - 
+      function generateModalContentRoutes(data, targetName) {
+        const targetItem = data.find((item) => item.name === targetName);
+        if (!targetItem) {
+          return `<p>No information available for the selected item.</p>`;
+        }
+        let content = `
+				<strong>Наименование:</strong> ${targetItem.name || "N/A"}<br>
+				<strong>Протяженность тропы:</strong> ${targetItem.length || "N/A"} км <br>
+				<strong>Тип тропы по типу передвижения:</strong> ${
+          targetItem.movement_ret || "N/A"
+        } <br>
+				<strong>Время прохождения тропы:</strong> ${
+          targetItem.time_min === null
+            ? "N/A"
+            : targetItem.time_min.split("T")[1]
+        } - 
 				${
-				targetItem.max_time === null ? 'N/A' : (targetItem.max_time.split('T'))[1] } ч <br>
-				<strong>Регион:</strong> ${targetItem.region || 'N/A'} <br>			
+          targetItem.max_time === null
+            ? "N/A"
+            : targetItem.max_time.split("T")[1]
+        } ч <br>
+				<strong>Регион:</strong> ${targetItem.region || "N/A"} <br>			
 				<br>`;
 
-			const imageId1 = extractImageId(targetItem.photo1);
-			if (imageId1) {
-				const newLink = constructThumbnailLink(imageId1);
-				content += `<div class="photo-section">
+        const imageId1 = extractImageId(targetItem.photo1);
+        if (imageId1) {
+          const newLink = constructThumbnailLink(imageId1);
+          content += `<div class="photo-section">
 				<img src=${newLink} alt="Photo of ${targetItem.name}" class="modal-photo">
         		</div>`;
-			}
-			const imageId2 = extractImageId(targetItem.photo2);
-			if (imageId2) {
-				const newLink = constructThumbnailLink(imageId2);
-				content += `<div class="photo-section">
+        }
+        const imageId2 = extractImageId(targetItem.photo2);
+        if (imageId2) {
+          const newLink = constructThumbnailLink(imageId2);
+          content += `<div class="photo-section">
 				<img src=${newLink} alt="Photo of ${targetItem.name}" class="modal-photo">
         		</div>`;
-			}
-			return content;
-		}
-		function generateModalContent2(data, properties) {
-				console.log()
-				let content = `
-				<strong>Наименование:</strong> ${properties.name || 'N/A'}<br>
-				<strong>Категория:</strong> ${properties.category || 'N/A'} <br>`;
-				return content;
-			}
-		function generateModalContent3(data, targetId) {
-			const targetItem = data.find(item => item.id === targetId);
-			if (!targetItem) {
-				return `<p>No information available for the selected item.</p>`;
-			}
-			let content = `
-				<strong>Тип объекта:</strong> ${targetItem.tipeobj || 'N/A'}<br>
-				<strong>Состояние:</strong> ${targetItem.stagesid_ret || 'N/A'} <br>
+        }
+        return content;
+      }
+      function generateModalContentRegions(data, properties) {
+        let content = `
+				<strong>Наименование:</strong> ${properties.name || "N/A"}<br>
+				<strong>Категория:</strong> ${properties.category || "N/A"} <br>`;
+        return content;
+      }
+      function generateModalContentObjects(data, targetId) {
+        const targetItem = data.find((item) => item.id === targetId);
+        if (!targetItem) {
+          return `<p>No information available for the selected item.</p>`;
+        }
+        let content = `
+				<strong>Тип объекта:</strong> ${targetItem.tipeobj || "N/A"}<br>
+				<strong>Состояние:</strong> ${targetItem.stagesid_ret || "N/A"} <br>
 				<br>`;
-			if (targetItem.photo1 && isValidImageUrl(targetItem.photo1)) {
-				content += `<div class="photo-section">
+        if (targetItem.photo1 && isValidImageUrl(targetItem.photo1)) {
+          content += `<div class="photo-section">
             	<img src="${targetItem.photo1}" alt="Photo of ${targetItem.name}" class="modal-photo">
         		</div>`;
-			}
-			if (targetItem.photo2 && isValidImageUrl(targetItem.photo2)) {
-				content += `<div class="photo-section">
+        }
+        if (targetItem.photo2 && isValidImageUrl(targetItem.photo2)) {
+          content += `<div class="photo-section">
             	<img src="${targetItem.photo1}" alt="Photo of ${targetItem.name}" class="modal-photo">
         		</div>`;
-			}
-			return content;
-		}
+        }
+        return content;
+      }
 
-		function generateAdditionalModalContent(data, targetName) {
-			const targetItem = data.find(item => item.name === targetName);
-			if (!targetItem) {
-				return `<p>No information available for the selected item.</p>`;
-			}
-			// let content = '<ul>';
-			let content = `
-				<strong>Эксплуатирует и управляет:</strong> ${targetItem.controls_ret || 'N/A'}<br>
-				<strong>Статус:</strong> ${targetItem.status_ret || 'N/A'}<br>
+      function generateMoreModalContentRoutes(data, targetName) {
+        const targetItem = data.find((item) => item.name === targetName);
+        if (!targetItem) {
+          return `<p>No information available for the selected item.</p>`;
+        }
+        // let content = '<ul>';
+        let content = `
+				<strong>Эксплуатирует и управляет:</strong> ${
+          targetItem.controls_ret || "N/A"
+        }<br>
+				<strong>Статус:</strong> ${targetItem.status_ret || "N/A"}<br>
 				<strong>Доступна для людей с ограниченными возможностями:</strong> ${
-				targetItem.disabled_person === true ? (targetItem.disabled_explanation || 'N/A')
-					: 'Нет'}<br>
+          targetItem.disabled_person === true
+            ? targetItem.disabled_explanation || "N/A"
+            : "Нет"
+        }<br>
 				<strong>Проходит приграничная зона или территория с особым режимом пребывания:</strong> ${
-				targetItem.stay_mode === true ? 'Да' : targetItem.stay_mode === false ? 'Нет' : 'N/A'}
+          targetItem.stay_mode === true
+            ? "Да"
+            : targetItem.stay_mode === false
+            ? "Нет"
+            : "N/A"
+        }
 
 			<br>`;
-			// content += '</ul>';
-			return content;
-		}
-		function generateAdditionalModalContent3(data, targetId) {
-				const targetItem = data.find(item => item.id === targetId);
-				if (!targetItem) {
-					return `<p>No information available for the selected item.</p>`;
-				}
-				let content = `
-				<strong>Размер объекта:</strong> ${targetItem.ziseobj || 'N/A'}<br>
-				<strong>Инвентарный номер:</strong> ${targetItem.invnumb || 'N/A'}<br>
-				<strong>Информация о контракте:</strong> ${targetItem.cont_inf || 'N/A'}<br>
-				<strong>Материалы:</strong> ${targetItem.material || 'N/A'}
+        // content += '</ul>';
+        return content;
+      }
+      function generateMoreModalContentObjects(data, targetId) {
+        const targetItem = data.find((item) => item.id === targetId);
+        if (!targetItem) {
+          return `<p>No information available for the selected item.</p>`;
+        }
+        let content = `
+				<strong>Размер объекта:</strong> ${targetItem.ziseobj || "N/A"}<br>
+				<strong>Инвентарный номер:</strong> ${targetItem.invnumb || "N/A"}<br>
+				<strong>Информация о контракте:</strong> ${targetItem.cont_inf || "N/A"}<br>
+				<strong>Материалы:</strong> ${targetItem.material || "N/A"}
 
 			<br>`;
-				return content;
-			}
+        return content;
+      }
 
-		function onEachFeature(feature, layer, layerType) {
-			if (feature.properties && feature.properties.name) {
-				// Bind a popup to the layer, showing a clickable link
-				if (layerType === 'equipment') layer.bindPopup(`<a>${feature.properties.name}</a>`)
-				else layer.bindPopup(`<a href="#" class="popup-link">${feature.properties.name}</a>`);
+      function onEachFeature(feature, layer, layerType) {
+        if (feature.properties && feature.properties.name) {
+          // Bind a popup to the layer, showing a clickable link
+          if (layerType === "equipment")
+            layer.bindPopup(`<a>${feature.properties.name}</a>`);
+          else
+            layer.bindPopup(
+              `<a href="#" class="popup-link">${feature.properties.name}</a>`
+            );
 
-				layer.on('popupopen', function () {
-					const link = document.querySelector('.popup-link');
-					if (link) {
-						link.addEventListener('click', function (e) {
-							e.preventDefault();
-							if (layerType === 'routes' && routesData) {
-								//openModal('Routes Information', generateModalContent(routesData));
-								openModal('Информация о маршруте', generateModalContent(routesData, feature.properties.name), generateAdditionalModalContent(routesData, feature.properties.name));
-							} else if (layerType === 'regions' && regionsData) {
-								//openModal('Regions Information', generateModalContent(regionsData));
-								openModal('Информация об ООПТ', generateModalContent2(regionsData, feature.properties), 'Информация о регионе недоступна');
-							} else if (layerType === 'objects' && objectsData) {
-								openModal('Информация об объекте', generateModalContent3(objectsData, feature.properties.id), generateAdditionalModalContent3(objectsData, feature.properties.id))
-							}
-						});
-					}
-				});
-			}
-		}
-	
-		function openModal(title, infoText, moreInfo) {
-			// Update the modal title
-			const modalTitle = document.getElementById('modalTitle');
-			modalTitle.textContent = title;
-			// Update the modal info text
-			const modalText = document.getElementById('modalText');
-			modalText.querySelector('p.indented').innerHTML = infoText;
-			// Update the "Show More" section
-			const moreContent = document.getElementById('moreContent');
-			moreContent.innerHTML = moreInfo;
-			moreContent.classList.add('hidden'); // Hide the additional content initially
-			document.getElementById('showMoreButton').textContent = 'Показать больше';
-			const modal = document.getElementById('infoModal');
-			modal.style.display = 'block';
-		}
+          layer.on("popupopen", function () {
+            const link = document.querySelector(".popup-link");
+            if (link) {
+              link.addEventListener("click", function (e) {
+                e.preventDefault();
+                if (layerType === "routes" && routesData) {
+                  openModal(
+                    "Информация о маршруте",
+                    generateModalContentRoutes(
+                      routesData,
+                      feature.properties.name
+                    ),
+                    generateMoreModalContentRoutes(
+                      routesData,
+                      feature.properties.name
+                    )
+                  );
+                } else if (layerType === "regions" && regionsData) {
+                  openModal(
+                    "Информация об ООПТ",
+                    generateModalContentRegions(
+                      regionsData,
+                      feature.properties
+                    ),
+                    "Информация о регионе недоступна"
+                  );
+                } else if (layerType === "objects" && objectsData) {
+                  openModal(
+                    "Информация об объекте",
+                    generateModalContentObjects(
+                      objectsData,
+                      feature.properties.id
+                    ),
+                    generateMoreModalContentObjects(
+                      objectsData,
+                      feature.properties.id
+                    )
+                  );
+                }
+              });
+            }
+          });
+        }
+      }
 
-		// Function to close the modal
-		function closeModal() {
-			const modal = document.getElementById('infoModal');
-			modal.style.display = 'none';
-		}
-		// Close the modal when the close button is clicked
-		document.querySelector('.close').addEventListener('click', function () {
-			const modal = document.getElementById('infoModal');
-			modal.style.display = 'none';
-		})
-		// Close the modal when clicking outside of it
-		window.addEventListener('click', function (event) {
-			const modal = document.getElementById('infoModal');
-			if (event.target === modal) {
-				modal.style.display = 'none';
-			}
-		});
+      function openModal(title, infoText, moreInfo) {
+        // Update the modal title
+        const modalTitle = document.getElementById("modalTitle");
+        modalTitle.textContent = title;
+        // Update the modal info text
+        const modalText = document.getElementById("modalText");
+        modalText.querySelector("p.indented").innerHTML = infoText;
+        // Update the "Show More" section
+        const moreContent = document.getElementById("moreContent");
+        moreContent.innerHTML = moreInfo;
+        moreContent.classList.add("hidden"); // Hide the additional content initially
+        document.getElementById("showMoreButton").textContent =
+          "Показать больше";
+        const modal = document.getElementById("infoModal");
+        modal.style.display = "block";
+      }
 
-		let geojsonData = {};
+      function closeModal() {
+        const modal = document.getElementById("infoModal");
+        modal.style.display = "none";
+      }
+      // Close the modal when the close button is clicked
+      document.querySelector(".close").addEventListener("click", function () {
+        const modal = document.getElementById("infoModal");
+        modal.style.display = "none";
+      });
+      // Close the modal when clicking outside of it
+      window.addEventListener("click", function (event) {
+        const modal = document.getElementById("infoModal");
+        if (event.target === modal) {
+          modal.style.display = "none";
+        }
+      });
 
-		function fetchGeoJSON(url) {
-			return fetch(url)
-				.then(response => {
-					if (!response.ok) {
-						throw new Error('Something went wrong');
-					}
-					return response.json();
-				})
-				.catch(error => {
-					console.error('There was a problem with the fetch operation:', error);
-					throw error; // Re-throw to handle in the calling function
-				});
-		}
+      let geojsonData = {};
 
-		// Function to process the GeoJSON data
-		function processGeoJSON(data, layerType, filtered) {
-			console.log("data", data);
-			const equipIcon = new L.Icon({
-				iconUrl: "{{ url_for('static', filename='images/marker-icon-2x-green.png') }}",
-				shadowUrl: "{{ url_for('static', filename='images/marker-shadow.png') }}",
-				iconSize: [25, 41],
-				iconAnchor: [12, 41],
-				popupAnchor: [1, -34],
-				shadowSize: [41, 41]
-			});
+      function fetchGeoJSON(url) {
+        return fetch(url)
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error("Something went wrong");
+            }
+            return response.json();
+          })
+          .catch((error) => {
+            console.error(
+              "There was a problem with the fetch operation:",
+              error
+            );
+            throw error; // Re-throw to handle in the calling function
+          });
+      }
 
-			const objIcon = new L.Icon({
-				iconUrl: "{{ url_for('static', filename='images/marker-icon-2x-orange.png') }}",
-				shadowUrl: "{{ url_for('static', filename='images/marker-shadow.png') }}",
-				iconSize: [25, 41],
-				iconAnchor: [12, 41],
-				popupAnchor: [1, -34],
-				shadowSize: [41, 41]
-			});
+      // Function to display GeoJSON data layers
+      function processGeoJSON(data, layerType, filtered) {
+        const equipIcon = new L.Icon({
+          iconUrl:
+            "{{ url_for('static', filename='images/marker-icon-2x-green.png') }}",
+          shadowUrl:
+            "{{ url_for('static', filename='images/marker-shadow.png') }}",
+          iconSize: [25, 41],
+          iconAnchor: [12, 41],
+          popupAnchor: [1, -34],
+          shadowSize: [41, 41],
+        });
 
-			// Create the GeoJSON layer with custom style and event handlers
-			const geoJsonLayer = L.geoJSON(data, {
-				pointToLayer: function (feature, latlng) {
-					// Apply different icons based on layer type
-					if (layerType === 'objects') {
-						return L.marker(latlng, { icon: objIcon });
-					} else if (layerType === 'equipment') {
-						return L.marker(latlng, { icon: equipIcon });
-					}
-					return L.marker(latlng);
-				},
-				style: function (feature) {
-					// Style for line and polygon features
-					if (layerType === 'routes') {
-						return {
-							color: '#036e29', // Line color for routes
-							weight: 2
-						};
-					} else if (layerType === 'regions') {
-						return {
-							color: '#de9e09', // Outline color for regions
-							weight: 2,
-							fillColor: '#de9e09', // Fill color for regions
-							fillOpacity: 0.3
-						};
-					}
-				},
-				onEachFeature: function (feature, layer) {
-					onEachFeature(feature, layer, layerType);
-				}
-			});
-			// Add or update the layer based on the layer type
-			if (layerType === 'routes') {
-				if (routesLayer) {
-					map.removeLayer(routesLayer);
-					if (!filtered) { routesLayer = null; }
-				}
-				else {
-					if (!filtered) {
-						routesLayer = geoJsonLayer;
-						routesLayer.addTo(map);
-					}
-				}
-				if (filtered) {
-					routesLayer = geoJsonLayer;
-					routesLayer.addTo(map); 
-				}
-			} 
-			else if (layerType === 'equipment') {
-				if (!filtered) {
-					if (equipmentLayer) {
-						console.log("1");
-						map.removeLayer(equipmentLayer);
-						equipmentLayer = null; 
-					}
-					else {
-						console.log("2");
-						equipmentLayer = geoJsonLayer;
-						equipmentLayer.addTo(map);
-					}
-				}
-				if (filtered && equipmentLayer != null)  {
-					console.log("3");
-					//works
-					map.removeLayer(equipmentLayer);
-					equipmentLayer = geoJsonLayer;
-					equipmentLayer.addTo(map);
-				}
-			} 
-			else if (layerType === 'regions') {
-				// if (regionsLayer) {
-				// 	console.log("remove", regionsLayer)
-				// 	map.removeLayer(regionsLayer);
-				// 	regionsLayer = null;
-				// }
-				// else {
-				// 	regionsLayer = geoJsonLayer;
-				// 	console.log("add", regionsLayer)
-				// 	regionsLayer.addTo(map);
-				// }
-				if (regionsLayer) {
-					map.removeLayer(regionsLayer);
-					if (!filtered) { regionsLayer = null; }
-				}
-				else {
-					if (!filtered) {
-						regionsLayer = geoJsonLayer;
-						regionsLayer.addTo(map);
-					}
-				}
-				if (filtered) {
-					regionsLayer = geoJsonLayer;
-					regionsLayer.addTo(map);
-				}
-			} 
-			else if (layerType === 'objects') {
-				console.log("geoJsonLayer", geoJsonLayer)
-				if (objectsLayer) {
-					console.log("remove", objectsLayer)
-					map.removeLayer(objectsLayer);
-					objectsLayer = null;
-				}
-				else {
-					console.log("objectsLayer", objectsLayer)
-					objectsLayer = geoJsonLayer;
-					console.log("objectsLayer2", objectsLayer)
+        const objIcon = new L.Icon({
+          iconUrl:
+            "{{ url_for('static', filename='images/marker-icon-2x-orange.png') }}",
+          shadowUrl:
+            "{{ url_for('static', filename='images/marker-shadow.png') }}",
+          iconSize: [25, 41],
+          iconAnchor: [12, 41],
+          popupAnchor: [1, -34],
+          shadowSize: [41, 41],
+        });
 
-					// console.log("add", objectsLayer)
-					objectsLayer.addTo(map);
-				}
-			}
-		}
+        // Create the GeoJSON layer with custom style and event handlers
+        const geoJsonLayer = L.geoJSON(data, {
+          pointToLayer: function (feature, latlng) {
+            // Apply different icons based on layer type
+            if (layerType === "objects") {
+              return L.marker(latlng, { icon: objIcon });
+            } else if (layerType === "equipment") {
+              return L.marker(latlng, { icon: equipIcon });
+            }
+            return L.marker(latlng);
+          },
+          style: function (feature) {
+            // Style for line and polygon features
+            if (layerType === "routes") {
+              return {
+                color: "#036e29",
+                weight: 2,
+              };
+            } else if (layerType === "regions") {
+              return {
+                color: "#de9e09",
+                weight: 2,
+                fillColor: "#de9e09",
+                fillOpacity: 0.3,
+              };
+            }
+          },
+          onEachFeature: function (feature, layer) {
+            onEachFeature(feature, layer, layerType);
+          },
+        });
+        // Add or update the layer based on the layer type
+        if (layerType === "routes") {
+          if (routesLayer) {
+            map.removeLayer(routesLayer);
+            if (!filtered) {
+              routesLayer = null;
+            }
+          } else {
+            if (!filtered) {
+              routesLayer = geoJsonLayer;
+              routesLayer.addTo(map);
+            }
+          }
+          if (filtered) {
+            routesLayer = geoJsonLayer;
+            routesLayer.addTo(map);
+          }
+        } else if (layerType === "equipment") {
+          if (!filtered) {
+            if (equipmentLayer) {
+              map.removeLayer(equipmentLayer);
+              equipmentLayer = null;
+            } else {
+              equipmentLayer = geoJsonLayer;
+              equipmentLayer.addTo(map);
+            }
+          }
+          if (filtered && equipmentLayer != null) {
+            map.removeLayer(equipmentLayer);
+            equipmentLayer = geoJsonLayer;
+            equipmentLayer.addTo(map);
+          }
+        } else if (layerType === "regions") {
+          if (regionsLayer) {
+            map.removeLayer(regionsLayer);
+            if (!filtered) {
+              regionsLayer = null;
+            }
+          } else {
+            if (!filtered) {
+              regionsLayer = geoJsonLayer;
+              regionsLayer.addTo(map);
+            }
+          }
+          if (filtered) {
+            regionsLayer = geoJsonLayer;
+            regionsLayer.addTo(map);
+          }
+        } else if (layerType === "objects") {
+          if (objectsLayer) {
+            map.removeLayer(objectsLayer);
+            objectsLayer = null;
+          } else {
+            objectsLayer = geoJsonLayer;
+            objectsLayer.addTo(map);
+          }
+        }
+      }
 
-		// Unified function to fetch and process GeoJSON data
-		function loadGeoJSON(url, layerType) {
-			fetchGeoJSON(url)
-				.then(data => {
-					geojsonData[layerType] = data;
-					console.log("geojsonData[layerType]", data)
-					processGeoJSON(data, layerType, false);
-				})
-				.catch(error => {
-					console.error('Failed to load and process GeoJSON data:', error);
-				});
-		}
-		
-		// Get references to tabs and filter pages
-		const routesTab = document.getElementById("routesTab");
-		const regionsTab = document.getElementById("regionsTab");
-		const routesFilter = document.getElementById("routesFilter");
-		const regionsFilter = document.getElementById("regionsFilter");
+      // Unified function to fetch and process GeoJSON data
+      function loadGeoJSON(url, layerType) {
+        fetchGeoJSON(url)
+          .then((data) => {
+            geojsonData[layerType] = data;
+            processGeoJSON(data, layerType, false);
+          })
+          .catch((error) => {
+            console.error("Failed to load and process GeoJSON data:", error);
+          });
+      }
 
-		// Function to activate the Routes filter
-		routesTab.addEventListener("click", function () {
-			routesFilter.style.display = "block";
-			regionsFilter.style.display = "none";
-			routesTab.classList.add("active-tab");
-			regionsTab.classList.remove("active-tab");
-		});
+      // Get references to tabs and filter pages
+      const routesTab = document.getElementById("routesTab");
+      const regionsTab = document.getElementById("regionsTab");
+      const routesFilter = document.getElementById("routesFilter");
+      const regionsFilter = document.getElementById("regionsFilter");
 
-		// Function to activate the Regions filter
-		regionsTab.addEventListener("click", function () {
-			regionsFilter.style.display = "block";
-			routesFilter.style.display = "none";
-			regionsTab.classList.add("active-tab");
-			routesTab.classList.remove("active-tab");
-		});
+      // Function to activate the Routes filter
+      routesTab.addEventListener("click", function () {
+        routesFilter.style.display = "block";
+        regionsFilter.style.display = "none";
+        routesTab.classList.add("active-tab");
+        regionsTab.classList.remove("active-tab");
+      });
 
-		function filterData(selectedMovementRet, selectedLength) {
-			const layerType = 'routes';
-			if (!geojsonData['routes'] || !routesData) return; 
-			const lengthRanges = selectedLength.map(range => {
-				const [min, max] = range.includes('+') ? [10, Infinity] : range.split('-').map(Number);
-				return { min, max };
-			});
-			const matchingIds = new Set(
-				routesData
-					.filter(item => {
-						const matchesMovementRet = selectedMovementRet.length === 0 ||
-							selectedMovementRet.includes(item.movement_ret);
-						const matchesLength = lengthRanges.length === 0 || lengthRanges.some(({ min, max }) =>
-							item.length >= min && item.length <= max
-						);
-						matchesLength ? console.log("length:", item.length) : console.log("N/A:");
-						return matchesMovementRet && matchesLength;
-					})
-					.map(item => item.id)
-			);
-			console.log("matchingIds:", matchingIds);
-			// Filter GeoJSON features based on these IDs
-			const filteredFeatures = geojsonData['routes'].features.filter(feature =>
-				matchingIds.has(feature.properties.id) // assuming properties.id is used in GeoJSON for db id
-			);
-			const filteredGeoData = { ...geojsonData['routes'], features: filteredFeatures };
-			processGeoJSON(filteredGeoData, layerType, true);
+      // Function to activate the Regions filter
+      regionsTab.addEventListener("click", function () {
+        regionsFilter.style.display = "block";
+        routesFilter.style.display = "none";
+        regionsTab.classList.add("active-tab");
+        routesTab.classList.remove("active-tab");
+      });
 
-			if (!geojsonData['equipment']) return;
-			console.log("ff", geojsonData['equipment']);
-			const matchingEquipmentIds = new Set(
-				geojsonData['equipment'].features
-					.filter(feature => {
-						const item = feature.properties;
-						const matchesRoute = matchingIds.has(item.link_to_route);
-						// console.log("matchesRoute:", matchesRoute);
-						return matchesRoute;
-					})
-					.map(feature => feature.properties.id)
-			);
-			console.log("matchingEquipmentIds:", matchingEquipmentIds);
-			const filteredEquipmentFeatures = geojsonData['equipment'].features.filter(feature =>
-				matchingEquipmentIds.has(feature.properties.id)
-			);
+      function filterData(selectedMovementRet, selectedLength) {
+        const layerType = "routes";
+        if (!geojsonData["routes"] || !routesData) return;
+        const lengthRanges = selectedLength.map((range) => {
+          const [min, max] = range.includes("+")
+            ? [10, Infinity]
+            : range.split("-").map(Number);
+          return { min, max };
+        });
+        const matchingIds = new Set(
+          routesData
+            .filter((item) => {
+              const matchesMovementRet =
+                selectedMovementRet.length === 0 ||
+                selectedMovementRet.includes(item.movement_ret);
+              const matchesLength =
+                lengthRanges.length === 0 ||
+                lengthRanges.some(
+                  ({ min, max }) => item.length >= min && item.length <= max
+                );
+              return matchesMovementRet && matchesLength;
+            })
+            .map((item) => item.id)
+        );
+        // Filter GeoJSON features based on these IDs
+        const filteredFeatures = geojsonData["routes"].features.filter(
+          (feature) => matchingIds.has(feature.properties.id) // assuming properties.id is used in GeoJSON for db id
+        );
+        const filteredGeoData = {
+          ...geojsonData["routes"],
+          features: filteredFeatures,
+        };
+        processGeoJSON(filteredGeoData, layerType, true);
 
-			// Update GeoJSON data with only the filtered features
-			const filteredEquipment = { ...geojsonData['routes'], features: filteredEquipmentFeatures };
-			processGeoJSON(filteredEquipment, 'equipment', true);
-		}
+        if (!geojsonData["equipment"]) return;
+        const matchingEquipmentIds = new Set(
+          geojsonData["equipment"].features
+            .filter((feature) => {
+              const item = feature.properties;
+              const matchesRoute = matchingIds.has(item.link_to_route);
+              return matchesRoute;
+            })
+            .map((feature) => feature.properties.id)
+        );
+        const filteredEquipmentFeatures = geojsonData[
+          "equipment"
+        ].features.filter((feature) =>
+          matchingEquipmentIds.has(feature.properties.id)
+        );
 
-		function filterRegions(selectedCategory) {
-			if (!geojsonData['regions'] || !regionsData) return; 
-			const matchingIds = new Set(
-				geojsonData['regions'].features
-					.filter(feature => {
-						const item = feature.properties;
-						// console.log("item", item);
-						// console.log("item.category", item.category);
-						// console.log("selectedCategory", selectedCategory);
-						const matchesCategory = selectedCategory.includes(item.category);
-						console.log("matchesCategory", matchesCategory);
-						return matchesCategory;
-					})
-					.map(feature => feature.properties.id)
-			);
-			const filteredRegionsFeatures = geojsonData['regions'].features.filter(feature =>
-				matchingIds.has(feature.properties.id)
-			);
-			const filteredRegions = { ...geojsonData['regions'], features: filteredRegionsFeatures };
-			processGeoJSON(filteredRegions, 'regions', true);
-		}
-		// Toggle the filter options display on button click
-		document.getElementById('filterButton').addEventListener('click', () => {
-			const filterOptions = document.getElementById('filterOptions');
-			filterOptions.style.display = filterOptions.style.display === 'none' ? 'block' : 'none';
-		});
+        // Update GeoJSON data with only the filtered features
+        const filteredEquipment = {
+          ...geojsonData["routes"],
+          features: filteredEquipmentFeatures,
+        };
+        processGeoJSON(filteredEquipment, "equipment", true);
+      }
 
-		// Apply the filter based on selected checkboxes
-		function filterRoutesAndEquipment() {
-			const selectedMovementRet = Array.from(document.querySelectorAll('#routesFilter input[type="checkbox"]:checked'))
-				.filter(checkbox => checkbox.id.startsWith('movementRet'))
-				.map(checkbox => checkbox.value);
-			const selectedLength = Array.from(document.querySelectorAll('#routesFilter input[type="checkbox"]:checked'))
-				.filter(checkbox => checkbox.id.startsWith('length'))
-				.map(checkbox => checkbox.value);
-			filterData(selectedMovementRet, selectedLength)
-		};
+      function filterRegions(selectedCategory) {
+        if (!geojsonData["regions"] || !regionsData) return;
+        const matchingIds = new Set(
+          geojsonData["regions"].features
+            .filter((feature) => {
+              const item = feature.properties;
+              const matchesCategory = selectedCategory.includes(item.category);
+              return matchesCategory;
+            })
+            .map((feature) => feature.properties.id)
+        );
+        const filteredRegionsFeatures = geojsonData["regions"].features.filter(
+          (feature) => matchingIds.has(feature.properties.id)
+        );
+        const filteredRegions = {
+          ...geojsonData["regions"],
+          features: filteredRegionsFeatures,
+        };
+        processGeoJSON(filteredRegions, "regions", true);
+      }
+      // Toggle the filter options display on button click
+      document.getElementById("filterButton").addEventListener("click", () => {
+        const filterOptions = document.getElementById("filterOptions");
+        filterOptions.style.display =
+          filterOptions.style.display === "none" ? "block" : "none";
+      });
 
-		document.getElementById('applyFilter').addEventListener('click', () => {
-			if (routesTab.classList.contains("active-tab")) filterRoutesAndEquipment();
-			else if (regionsTab.classList.contains("active-tab")) {
-				const selectedCategory = Array.from(document.querySelectorAll('#regionsFilter input[type="checkbox"]:checked'))
-					.filter(checkbox => checkbox.id.startsWith('category'))
-					.map(checkbox => checkbox.value);
-				filterRegions(selectedCategory)
-			}
-		});
-		document.getElementById('resetFilter').addEventListener('click', () => {
-			if (routesTab.classList.contains("active-tab")) 
-			{
-				const checkboxes = document.querySelectorAll('#routesFilter input[type="checkbox"]')
-				checkboxes.forEach(checkbox => {
-					checkbox.checked = false;
-				});
-			//reset()
-				processGeoJSON(geojsonData['routes'], 'routes', true)
-				if (equipmentLayer != null) processGeoJSON(geojsonData['equipment'], 'equipment', true)
-			}
-			else if (regionsTab.classList.contains("active-tab")) {
-				const checkboxes = document.querySelectorAll('#regionsFilter input[type="checkbox"]')
-				checkboxes.forEach(checkbox => {
-					checkbox.checked = false;
-				});
-				processGeoJSON(geojsonData['regions'], 'regions', true)
-			}
-		})
-		
-		const equipmentCheckbox = document.getElementById('equipmentShow');
-		equipmentCheckbox.checked = false;
-		equipmentCheckbox.addEventListener('click', () => {
-			// const checkbox = document.getElementById('equipmentShow');
-			if (equipmentCheckbox.checked) {
-				if (routesLayer == null) {
-					loadGeoJSON("{{ url_for('equipment_data') }}", 'equipment');
-				}
-				else {
-					loadGeoJSON("{{ url_for('equipment_data') }}", 'equipment');
-					filterRoutesAndEquipment();
-				};
-			}
-			else {
-				if (equipmentLayer) map.removeLayer(equipmentLayer);
-				equipmentLayer = null;
-				console.log("5");
-			}
-		});
+      // Apply the filter based on selected checkboxes
+      function filterRoutesAndEquipment() {
+        const selectedMovementRet = Array.from(
+          document.querySelectorAll(
+            '#routesFilter input[type="checkbox"]:checked'
+          )
+        )
+          .filter((checkbox) => checkbox.id.startsWith("movementRet"))
+          .map((checkbox) => checkbox.value);
+        const selectedLength = Array.from(
+          document.querySelectorAll(
+            '#routesFilter input[type="checkbox"]:checked'
+          )
+        )
+          .filter((checkbox) => checkbox.id.startsWith("length"))
+          .map((checkbox) => checkbox.value);
+        filterData(selectedMovementRet, selectedLength);
+      }
 
-		const objectsCheckbox = document.getElementById('objectsShow');
-		objectsCheckbox.checked = false;
-		objectsCheckbox.addEventListener('click', () => {
-			// const checkbox = document.getElementById('objectsShow');
-			// data = fetchGeoJSON('/objects-geodata');
-			loadGeoJSON("{{ url_for('objects_data') }}", 'objects');
-			// if (objectsCheckbox.checked) {
-			// 	const geoJsonLayer = L.geoJSON(data, {
-			// 		style: function (feature) {
-			// 			return {
-			// 				color: 'black',
-			// 				weight: 2
-			// 			};
-			// 		}
-			// 	});
-			// 	objectsLayer = geoJsonLayer;
-			// 	// console.log("add", objectsLayer)
-			// 	objectsLayer.addTo(map);
-			// }
-			// else {
-			// 	if (objectsLayer) map.removeLayer(objectsLayer);
-			// 	objectsLayer = null;
-			// }
+      document.getElementById("applyFilter").addEventListener("click", () => {
+        if (routesTab.classList.contains("active-tab"))
+          filterRoutesAndEquipment();
+        else if (regionsTab.classList.contains("active-tab")) {
+          const selectedCategory = Array.from(
+            document.querySelectorAll(
+              '#regionsFilter input[type="checkbox"]:checked'
+            )
+          )
+            .filter((checkbox) => checkbox.id.startsWith("category"))
+            .map((checkbox) => checkbox.value);
+          filterRegions(selectedCategory);
+        }
+      });
+      document.getElementById("resetFilter").addEventListener("click", () => {
+        if (routesTab.classList.contains("active-tab")) {
+          const checkboxes = document.querySelectorAll(
+            '#routesFilter input[type="checkbox"]'
+          );
+          checkboxes.forEach((checkbox) => {
+            checkbox.checked = false;
+          });
+          processGeoJSON(geojsonData["routes"], "routes", true);
+          if (equipmentLayer != null)
+            processGeoJSON(geojsonData["equipment"], "equipment", true);
+        } else if (regionsTab.classList.contains("active-tab")) {
+          const checkboxes = document.querySelectorAll(
+            '#regionsFilter input[type="checkbox"]'
+          );
+          checkboxes.forEach((checkbox) => {
+            checkbox.checked = false;
+          });
+          processGeoJSON(geojsonData["regions"], "regions", true);
+        }
+      });
 
-		});
+      const equipmentCheckbox = document.getElementById("equipmentShow");
+      equipmentCheckbox.checked = false;
+      equipmentCheckbox.addEventListener("click", () => {
+        if (equipmentCheckbox.checked) {
+          if (routesLayer == null) {
+            loadGeoJSON("{{ url_for('equipment_data') }}", "equipment");
+          } else {
+            loadGeoJSON("{{ url_for('equipment_data') }}", "equipment");
+            filterRoutesAndEquipment();
+          }
+        } else {
+          if (equipmentLayer) map.removeLayer(equipmentLayer);
+          equipmentLayer = null;
+        }
+      });
 
-		// Event listeners for buttons
-		document.getElementById('load-routes').addEventListener('click', () => {
-			loadGeoJSON("{{ url_for('routes_data') }}", 'routes');
-		});
+      const objectsCheckbox = document.getElementById("objectsShow");
+      objectsCheckbox.checked = false;
+      objectsCheckbox.addEventListener("click", () => {
+        loadGeoJSON("{{ url_for('objects_data') }}", "objects");
+      });
 
-		document.getElementById('load-regions').addEventListener('click', () => {
-			loadGeoJSON("{{ url_for('regions_data') }}", 'regions');
-		});
+      // Event listeners for buttons
+      document.getElementById("load-routes").addEventListener("click", () => {
+        loadGeoJSON("{{ url_for('routes_data') }}", "routes");
+      });
 
-		document.getElementById('showMoreButton').addEventListener('click', function () {
-			const moreContent = document.getElementById('moreContent');
-			if (moreContent.classList.contains('hidden')) {
-				moreContent.classList.remove('hidden');
-				this.textContent = 'Скрыть';
-			} else {
-				moreContent.classList.add('hidden');
-				this.textContent = 'Показать больше';
-			}
-		});
-	</script>
-</body>
+      document.getElementById("load-regions").addEventListener("click", () => {
+        loadGeoJSON("{{ url_for('regions_data') }}", "regions");
+      });
+
+      document
+        .getElementById("showMoreButton")
+        .addEventListener("click", function () {
+          const moreContent = document.getElementById("moreContent");
+          if (moreContent.classList.contains("hidden")) {
+            moreContent.classList.remove("hidden");
+            this.textContent = "Скрыть";
+          } else {
+            moreContent.classList.add("hidden");
+            this.textContent = "Показать больше";
+          }
+        });
+    </script>
+  </body>
 </html>

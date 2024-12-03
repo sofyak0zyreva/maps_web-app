@@ -1,47 +1,45 @@
+#infoModal {
+	display: none;
+}
+
 .modal {
-	display: flex;
-	justify-content: center;
-	align-items: center;
+	display: none;
 	position: fixed;
-	top: 0;
+	z-index: 1000;
 	left: 0;
+	top: 0;
 	width: 100%;
 	height: 100%;
-	padding: 20px; /* Padding around the modal to give space */
-	background-color: rgba(0, 0, 0, 0.2); /* Semi-transparent background */
-	box-sizing: border-box;
+	background-color: rgba(0, 0, 0, 0.15);
 }
+
 .modal-content {
 	position: relative;
-	width: 80%;
-	max-width: 600px; /* Maximum width of the modal */
-	max-height: calc(80vh - 60px); /* Reduce the height to leave space at the top and bottom */
-	overflow-y: auto;
-	background-color: #fff;
-	padding: 20px;
-	border-radius: 5px;
-	box-sizing: border-box;
-}
-/* .modal-content {
 	background-color: #fefefe;
-	margin: 15% auto;
+	margin: 10% auto;
 	padding: 20px;
 	border: 1px solid #888;
+	border-radius: 5px;
 	width: 80%;
-	max-width: 500px;
-	position: relative;
-} */
+	max-width: 600px;
+	max-height: calc(80vh - 60px);
+	overflow-y: auto;
+	box-sizing: border-box;
+	font-size: 15px;
+	font-family: "Source Sans Pro", "Arial", sans-serif;
+}
 
+.modal-photo {
+	max-width: 100%;
+	height: auto;
+	border-radius: 8px;
+	margin-top: 10px;
+}
 
-/* Add a draggable header for the modal */
-/* .modal-header {
-    cursor: move;
-    background-color: #f1f1f1;
-    padding: 10px;
-    text-align: center;
-    border-bottom: 1px solid #ddd;
-    font-weight: bold;
-} */
+.photo-section {
+	text-align: center;
+	margin-top: 10px;
+}
 
 .close {
 	color: #aaa;
@@ -60,10 +58,6 @@
 	text-decoration: none;
 	cursor: pointer;
 }
-
-/* .indented {
-	margin-left: 20px;
-} */
 
 .show-more-section {
 	margin-top: 10px;

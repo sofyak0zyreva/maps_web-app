@@ -55,7 +55,6 @@ def get_valid_token():
 
 
 routes = os.getenv('ROUTES')
-regions = os.getenv('REGIONS')
 equipment = os.getenv('EQUIPMENT')
 objects = os.getenv('REGOBJ')
 
@@ -66,7 +65,7 @@ def get_data():
     query_param = request.args.get('type')
     table_mapping = {
         'routes': routes,
-        'regions': regions,
+        'regions': routes,
         'equipment': equipment,
         'objects': objects
     }
@@ -141,6 +140,7 @@ def update_routes(routes_data):
 
 @app.route('/routes-geodata')
 def routes_data():
+    load_routes()
     return jsonify(routes_cache)
 
 
@@ -183,6 +183,7 @@ def update_regions(regions_data):
 
 @app.route('/regions-geodata')
 def regions_data():
+    load_regions()
     return jsonify(regions_cache)
 
 
@@ -221,11 +222,10 @@ def update_equipment(equip_data):
         except (TypeError, ValueError):
             continue  # Skip if coordinates are invalid
         if ident not in existing_equp_ids:
-            if ident > 1:  # TODO: remove when db is fixed
-                geometry = geojson.Point((longitude, latitude))
-                features.append(geojson.Feature(geometry=geometry, properties={
-                                "name": name, "id": ident, "type": type, "link_to_route": link_to_route}))
-                existing_equp_ids.add(ident)
+            geometry = geojson.Point((longitude, latitude))
+            features.append(geojson.Feature(geometry=geometry, properties={
+                            "name": name, "id": ident, "type": type, "link_to_route": link_to_route}))
+            existing_equp_ids.add(ident)
     geojson_data = geojson.FeatureCollection(features)
     if geojson_data:
         existing_geojson['features'].extend(geojson_data['features'])
@@ -235,6 +235,7 @@ def update_equipment(equip_data):
 
 @app.route('/equipment-geodata')
 def equipment_data():
+    load_equipment()
     return jsonify(equipment_cache)
 
 
@@ -284,6 +285,7 @@ def update_objects(objects_data):
 
 @app.route('/objects-geodata')
 def objects_data():
+    load_objects()
     return jsonify(objects_cache)
 
 
@@ -294,7 +296,6 @@ def process_regions(url, properties):
     kml_content = response.content
     root = ET.fromstring(kml_content)
     features = []
-    # properties = {"link": url}
 
     ns = {'kml': 'http://www.opengis.net/kml/2.2'}
     for placemark in root.findall('.//kml:Placemark', ns):

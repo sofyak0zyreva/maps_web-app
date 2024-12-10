@@ -400,9 +400,10 @@ def home():
     return render_template('index.html')
 
 
+load_routes()
+load_regions()
+load_equipment()
+load_objects()
+
 if __name__ == '__main__':
-    load_routes()
-    load_regions()
-    load_equipment()
-    load_objects()
     app.run(port=5000, debug=True)

@@ -4,4 +4,4 @@ fastkml==0.12
 gpxpy==1.6.2
 geojson==3.1.0
 flask-caching==2.3.0
-Flask-Cors==5.0.0 #not sure yet
+defusedxml==0.7.1

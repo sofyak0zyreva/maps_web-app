@@ -9,7 +9,7 @@ from flask import Flask, jsonify, render_template, request, session
 from flask_caching import Cache
 
 app = Flask(__name__, instance_relative_config=True)
-cache = Cache(app, config={"CACHE_TYPE": "simple"})
+cache = Cache(app, config={"CACHE_TYPE": "flask_caching.backends.SimpleCache"})
 
 # Set a secret key for the session
 app.secret_key = os.urandom(24)

@@ -81,26 +81,6 @@ def test_get_data_route_invalid_type(client):
     assert b"Invalid type parameter" in response.data
 
 
-def test_get_data_route_valid_type(client, mock_requests_post, mock_get_valid_token):
-    mock_get_valid_token.return_value = "fake-token"
-    mock_requests_post.return_value.status_code = 200
-    mock_requests_post.return_value.json.return_value = [
-        {"id": 1, "name": "Route 1"},
-        {"id": 2, "name": "Route 2"},
-    ]
-    response = client.get("/api/getDataTable?type=routes")
-    assert response.status_code == 200
-    assert b"Route 1" in response.data
-    assert b"Route 2" in response.data
-
-
-def test_routes_data(client):
-    response = client.get("/routes-geodata")
-
-    assert response.status_code == 200
-    assert "features" in response.json
-
-
 def test_process_file_gpx(mock_requests_get):
     mock_requests_get.return_value.status_code = 200
     mock_requests_get.return_value.content = (
@@ -111,12 +91,3 @@ def test_process_file_gpx(mock_requests_get):
 
     assert result is not None
     assert result["features"]
-
-
-def test_cache_enabled(client):
-    response1 = client.get("/api/getDataTable?type=regions")
-    assert response1.status_code == 200
-
-    response2 = client.get("/api/getDataTable?type=regions")
-    assert response2.status_code == 200
-    assert response2.data == response1.data

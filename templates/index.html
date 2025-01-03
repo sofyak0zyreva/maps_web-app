@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -326,8 +326,8 @@
           targetItem.stay_mode === true
             ? "Да"
             : targetItem.stay_mode === false
-            ? "Нет"
-            : "N/A"
+              ? "Нет"
+              : "N/A"
         }
 
 			<br>`;
@@ -356,7 +356,7 @@
             layer.bindPopup(`<a>${feature.properties.name}</a>`);
           else
             layer.bindPopup(
-              `<a href="#" class="popup-link">${feature.properties.name}</a>`
+              `<a href="#" class="popup-link">${feature.properties.name}</a>`,
             );
 
           layer.on("popupopen", function () {
@@ -369,33 +369,33 @@
                     "Информация о маршруте",
                     generateModalContentRoutes(
                       routesData,
-                      feature.properties.name
+                      feature.properties.name,
                     ),
                     generateMoreModalContentRoutes(
                       routesData,
-                      feature.properties.name
-                    )
+                      feature.properties.name,
+                    ),
                   );
                 } else if (layerType === "regions" && regionsData) {
                   openModal(
                     "Информация об ООПТ",
                     generateModalContentRegions(
                       regionsData,
-                      feature.properties
+                      feature.properties,
                     ),
-                    "Информация о регионе недоступна"
+                    "Информация о регионе недоступна",
                   );
                 } else if (layerType === "objects" && objectsData) {
                   openModal(
                     "Информация об объекте",
                     generateModalContentObjects(
                       objectsData,
-                      feature.properties.id
+                      feature.properties.id,
                     ),
                     generateMoreModalContentObjects(
                       objectsData,
-                      feature.properties.id
-                    )
+                      feature.properties.id,
+                    ),
                   );
                 }
               });
@@ -451,7 +451,7 @@
           .catch((error) => {
             console.error(
               "There was a problem with the fetch operation:",
-              error
+              error,
             );
             throw error; // Re-throw to handle in the calling function
           });
@@ -623,15 +623,15 @@
               const matchesLength =
                 lengthRanges.length === 0 ||
                 lengthRanges.some(
-                  ({ min, max }) => item.length >= min && item.length <= max
+                  ({ min, max }) => item.length >= min && item.length <= max,
                 );
               return matchesMovementRet && matchesLength;
             })
-            .map((item) => item.id)
+            .map((item) => item.id),
         );
         // Filter GeoJSON features based on these IDs
         const filteredFeatures = geojsonData["routes"].features.filter(
-          (feature) => matchingIds.has(feature.properties.id) // assuming properties.id is used in GeoJSON for db id
+          (feature) => matchingIds.has(feature.properties.id), // assuming properties.id is used in GeoJSON for db id
         );
         const filteredGeoData = {
           ...geojsonData["routes"],
@@ -647,12 +647,12 @@
               const matchesRoute = matchingIds.has(item.link_to_route);
               return matchesRoute;
             })
-            .map((feature) => feature.properties.id)
+            .map((feature) => feature.properties.id),
         );
         const filteredEquipmentFeatures = geojsonData[
           "equipment"
         ].features.filter((feature) =>
-          matchingEquipmentIds.has(feature.properties.id)
+          matchingEquipmentIds.has(feature.properties.id),
         );
 
         // Update GeoJSON data with only the filtered features
@@ -672,10 +672,10 @@
               const matchesCategory = selectedCategory.includes(item.category);
               return matchesCategory;
             })
-            .map((feature) => feature.properties.id)
+            .map((feature) => feature.properties.id),
         );
         const filteredRegionsFeatures = geojsonData["regions"].features.filter(
-          (feature) => matchingIds.has(feature.properties.id)
+          (feature) => matchingIds.has(feature.properties.id),
         );
         const filteredRegions = {
           ...geojsonData["regions"],
@@ -694,15 +694,15 @@
       function filterRoutesAndEquipment() {
         const selectedMovementRet = Array.from(
           document.querySelectorAll(
-            '#routesFilter input[type="checkbox"]:checked'
-          )
+            '#routesFilter input[type="checkbox"]:checked',
+          ),
         )
           .filter((checkbox) => checkbox.id.startsWith("movementRet"))
           .map((checkbox) => checkbox.value);
         const selectedLength = Array.from(
           document.querySelectorAll(
-            '#routesFilter input[type="checkbox"]:checked'
-          )
+            '#routesFilter input[type="checkbox"]:checked',
+          ),
         )
           .filter((checkbox) => checkbox.id.startsWith("length"))
           .map((checkbox) => checkbox.value);
@@ -715,8 +715,8 @@
         else if (regionsTab.classList.contains("active-tab")) {
           const selectedCategory = Array.from(
             document.querySelectorAll(
-              '#regionsFilter input[type="checkbox"]:checked'
-            )
+              '#regionsFilter input[type="checkbox"]:checked',
+            ),
           )
             .filter((checkbox) => checkbox.id.startsWith("category"))
             .map((checkbox) => checkbox.value);
@@ -726,7 +726,7 @@
       document.getElementById("resetFilter").addEventListener("click", () => {
         if (routesTab.classList.contains("active-tab")) {
           const checkboxes = document.querySelectorAll(
-            '#routesFilter input[type="checkbox"]'
+            '#routesFilter input[type="checkbox"]',
           );
           checkboxes.forEach((checkbox) => {
             checkbox.checked = false;
@@ -736,7 +736,7 @@
             processGeoJSON(geojsonData["equipment"], "equipment", true);
         } else if (regionsTab.classList.contains("active-tab")) {
           const checkboxes = document.querySelectorAll(
-            '#regionsFilter input[type="checkbox"]'
+            '#regionsFilter input[type="checkbox"]',
           );
           checkboxes.forEach((checkbox) => {
             checkbox.checked = false;
